@@ -86,16 +86,24 @@ function saveExercise() {
 }
 
 function saveToCache() {
-    localStorage.setItem('workoutKeep_save', JSON.stringify(workoutData));
+    try {
+        localStorage.setItem('workoutKeep_save', JSON.stringify(workoutData));
+    } catch (e) {
+        console.error("Storage failed", e);
+    }
 }
 
 // Load on start
 window.onload = () => {
     const saved = localStorage.getItem('workoutKeep_save');
-    if(saved) {
+    if(saved && saved !== "undefined") { // Added safety check
         workoutData = JSON.parse(saved);
-        setTheme(workoutData.theme);
+        if(workoutData.theme) setTheme(workoutData.theme);
+        if(workoutData.name) document.getElementById('workout-name-input').value = workoutData.name;
         renderBuilder();
+    } else {
+        // Fallback: Initialize an empty set so the screen isn't empty
+        addNewSet(); 
     }
 };
 
