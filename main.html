@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>WorkoutKeep</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="purple">
+    <div id="app">
+        <header>
+            <input type="text" id="workout-name-input" placeholder="Workout Name" class="ghost-input">
+            <div class="theme-picker">
+                <div class="dot purple active" onclick="setTheme('purple')"></div>
+                <div class="dot teal" onclick="setTheme('teal')"></div>
+                <div class="dot orange" onclick="setTheme('orange')"></div>
+                <div class="dot pink" onclick="setTheme('pink')"></div>
+                <div class="dot blue" onclick="setTheme('blue')"></div>
+                <div class="dot black" onclick="setTheme('black')"></div>
+            </div>
+        </header>
+
+        <main id="builder-area">
+            </main>
+
+        <button class="btn-secondary full-width" onclick="addNewSet()">+ New Set</button>
+
+        <div class="est-time-container">
+            <label>Estimated Time</label>
+            <select id="est-time-select">
+                <option>5 minutes</option>
+                <option>10 minutes</option>
+                <option>15-20 minutes</option>
+                <option>20-30 minutes</option>
+                <option>30-45 minutes</option>
+                <option>45-60 minutes</option>
+                <option>1-1.5 hours</option>
+                <option>1.5-2 hours</option>
+            </select>
+        </div>
+    </div>
+
+    <footer class="sticky-footer">
+        <div class="progress-container">
+            <div id="main-progress-bar" style="width: 0%"></div>
+        </div>
+        <div class="footer-btns">
+            <button class="btn-footer-sec">Pause</button>
+            <button class="btn-footer-pri">Finish Workout</button>
+        </div>
+    </footer>
+
+    <div id="ex-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <input type="text" id="modal-ex-name" placeholder="Name Exercise">
+            
+            <div class="toggle-container">
+                <button id="mode-reps" class="toggle-btn active" onclick="setExMode('reps')">REPS<br><small>count</small></button>
+                <button id="mode-timed" class="toggle-btn" onclick="setExMode('timed')">TIMED<br><small>seconds</small></button>
+            </div>
+
+            <div class="val-display">
+                <button onclick="adjustVal(-5)">-</button>
+                <span id="modal-val">10</span>
+                <button onclick="adjustVal(5)">+</button>
+            </div>
+
+            <div class="modal-actions">
+                <button class="save-btn" onclick="saveExercise()">SAVE</button>
+                <button class="delete-btn" onclick="closeModal()">🗑️</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js.js"></script>
+</body>
+</html>
+
