@@ -1,29 +1,34 @@
+// Initial Data Structure
 let workoutData = {
     name: "",
     theme: "purple",
-    estTime: "1.5-2 hours",
     sets: []
 };
 
 let currentTargetSet = null;
 let currentExMode = 'reps';
 
-// Initialize
+// --- CORE FUNCTIONS ---
+
 function setTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     workoutData.theme = theme;
-    document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
-    document.querySelector(`.${theme}`).classList.add('active');
+    document.querySelectorAll('.dot').forEach(d => {
+        d.classList.toggle('active', d.dataset.color === theme);
+    });
     saveToCache();
 }
 
 function addNewSet() {
     workoutData.sets.push({ id: Date.now(), repeat: 1, exercises: [] });
     renderBuilder();
+    saveToCache();
 }
 
 function renderBuilder() {
     const container = document.getElementById('builder-area');
+    if (!container) return;
+    
     container.innerHTML = '';
     
     workoutData.sets.forEach((set, idx) => {
@@ -31,10 +36,12 @@ function renderBuilder() {
         div.className = 'set-card';
         div.innerHTML = `
             <div class="set-header">
-                <strong>Set ${idx+1}</strong>
-                <span>x ${set.repeat}</span>
+                <strong>Set ${idx + 1}</strong>
+                <div class="set-ctrl">
+                    x <input type="number" class="set-rep-input" value="${set.repeat}" data-idx="${idx}">
+                </div>
             </div>
-            <div id="ex-list-${idx}">
+            <div class="ex-list">
                 ${set.exercises.map(ex => `
                     <div class="ex-row">
                         <span>${ex.name}</span>
@@ -42,21 +49,57 @@ function renderBuilder() {
                     </div>
                 `).join('')}
             </div>
-            <button class="btn-footer-sec" onclick="openModal(${idx})">+ New Exercise</button>
+            <button class="add-ex-trigger" data-idx="${idx}">+ New Exercise</button>
         `;
         container.appendChild(div);
     });
 }
 
-// Modal Logic
-function openModal(setIdx) {
-    currentTargetSet = setIdx;
-    document.getElementById('ex-modal').classList.remove('hidden');
+function saveToCache() {
+    localStorage.setItem('workoutKeep_save', JSON.stringify(workoutData));
 }
 
-function closeModal() {
-    document.getElementById('ex-modal').classList.add('hidden');
-}
+// --- EVENT LISTENERS (The "Safety" Way) ---
+
+document.addEventListener('click', (e) => {
+    // Theme Switcher
+    if (e.target.classList.contains('dot')) {
+        setTheme(e.target.dataset.color);
+    }
+    
+    // Add Set
+    if (e.target.id === 'add-set-btn') {
+        addNewSet();
+    }
+    
+    // Open Modal
+    if (e.target.classList.contains('add-ex-trigger')) {
+        currentTargetSet = e.target.dataset.idx;
+        document.getElementById('ex-modal').classList.remove('hidden');
+    }
+
+    // Modal Controls
+    if (e.target.id === 'modal-close') document.getElementById('ex-modal').classList.add('hidden');
+    
+    if (e.target.id === 'mode-reps') setExMode('reps');
+    if (e.target.id === 'mode-timed') setExMode('timed');
+    
+    if (e.target.id === 'val-minus') adjustVal(-5);
+    if (e.target.id === 'val-plus') adjustVal(5);
+    
+    if (e.target.id === 'modal-save') {
+        const name = document.getElementById('modal-ex-name').value || "Exercise";
+        const val = document.getElementById('modal-val').innerText;
+        workoutData.sets[currentTargetSet].exercises.push({
+            name: name,
+            type: currentExMode,
+            val: val
+        });
+        document.getElementById('ex-modal').classList.add('hidden');
+        renderBuilder();
+        saveToCache();
+    }
+});
 
 function setExMode(mode) {
     currentExMode = mode;
@@ -66,44 +109,26 @@ function setExMode(mode) {
 
 function adjustVal(amt) {
     const el = document.getElementById('modal-val');
-    let curr = parseInt(el.innerText);
-    el.innerText = Math.max(0, curr + amt);
+    el.innerText = Math.max(0, parseInt(el.innerText) + amt);
 }
 
-function saveExercise() {
-    const name = document.getElementById('modal-ex-name').value || "Exercise";
-    const val = document.getElementById('modal-val').innerText;
-    
-    workoutData.sets[currentTargetSet].exercises.push({
-        name: name,
-        type: currentExMode,
-        val: val
-    });
-    
-    closeModal();
-    renderBuilder();
-    saveToCache();
-}
+// --- APP STARTUP ---
 
-function saveToCache() {
-    try {
-        localStorage.setItem('workoutKeep_save', JSON.stringify(workoutData));
-    } catch (e) {
-        console.error("Storage failed", e);
-    }
-}
-
-// Load on start
 window.onload = () => {
     const saved = localStorage.getItem('workoutKeep_save');
-    if(saved && saved !== "undefined") { // Added safety check
-        workoutData = JSON.parse(saved);
-        if(workoutData.theme) setTheme(workoutData.theme);
-        if(workoutData.name) document.getElementById('workout-name-input').value = workoutData.name;
-        renderBuilder();
+    if (saved) {
+        try {
+            workoutData = JSON.parse(saved);
+            setTheme(workoutData.theme || 'purple');
+        } catch(e) {
+            console.error("JSON Parse Error");
+        }
+    }
+    
+    // If no sets exist, start with one
+    if (workoutData.sets.length === 0) {
+        addNewSet();
     } else {
-        // Fallback: Initialize an empty set so the screen isn't empty
-        addNewSet(); 
+        renderBuilder();
     }
 };
-
