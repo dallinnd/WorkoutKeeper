@@ -1,71 +1,88 @@
 :root {
-    --bg: #ffffff;
-    --card: #000000;
-    --text-on-dark: #ffffff;
+    --bg-color: #f4f4f9;
+    --text-main: #333;
+    --card-bg: #1e1e1e;
+    --card-text: #ffffff;
+    --accent: #6200ea; /* Default Purple */
 }
 
-/* Theme Definitions */
-[data-theme="purple"] { --accent: #6200ea; }
-[data-theme="teal"] { --accent: #00acc1; }
-[data-theme="orange"] { --accent: #fb8c00; }
-[data-theme="pink"] { --accent: #d81b60; }
-[data-theme="blue"] { --accent: #2962ff; }
-[data-theme="black"] { --accent: #333333; }
+/* Theme Classes */
+body.theme-purple { --accent: #6200ea; }
+body.theme-teal { --accent: #00acc1; }
+body.theme-orange { --accent: #fb8c00; }
+body.theme-pink { --accent: #d81b60; }
+body.theme-blue { --accent: #2962ff; }
+body.theme-black { --accent: #222222; }
+
+* { box-sizing: border-box; font-family: sans-serif; }
 
 body {
-    margin: 0; font-family: sans-serif; background: var(--bg); padding: 20px;
-    padding-bottom: 150px;
+    margin: 0; padding: 20px;
+    background-color: var(--bg-color); color: var(--text-main);
 }
 
-/* Theme Picker Dots */
-.theme-picker { display: flex; gap: 10px; margin: 15px 0; }
-.dot { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; }
-.dot.active { border: 3px solid #555; }
+#app-wrapper { max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+
+header h1 { margin-top: 0; }
+#workout-name {
+    width: 100%; padding: 15px; font-size: 1.2rem;
+    border: 2px solid #ccc; border-radius: 8px; margin-bottom: 15px;
+}
+
+#theme-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+.theme-dot {
+    width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
+}
+.theme-dot.active { border-color: #333; }
 .purple { background: #6200ea; } .teal { background: #00acc1; }
 .orange { background: #fb8c00; } .pink { background: #d81b60; }
-.blue { background: #2962ff; } .black { background: #000; }
+.blue { background: #2962ff; } .black { background: #222; }
 
-/* Set Card Style */
+/* Set Cards */
 .set-card {
-    background: var(--card); color: var(--text-on-dark);
-    border-radius: 20px; padding: 20px; margin-bottom: 15px;
+    background: var(--card-bg); color: var(--card-text);
+    border-radius: 16px; padding: 20px; margin-bottom: 20px;
 }
-.set-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.set-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: bold; font-size: 1.2rem;}
+.set-header input { width: 50px; text-align: center; border-radius: 5px; border: none; padding: 5px; font-size: 1rem;}
 
-/* Exercise Row */
-.ex-row {
-    border: 1px solid white; border-radius: 25px;
-    padding: 10px 20px; margin-bottom: 10px;
+.exercise-row {
+    border: 1px solid #444; border-radius: 20px;
+    padding: 12px 20px; margin-bottom: 10px;
     display: flex; justify-content: space-between;
 }
 
-/* Modal Styling */
-.modal-overlay {
-    position: fixed; top:0; left:0; width:100%; height:100%;
-    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
+.add-ex-btn, #add-set-btn {
+    width: 100%; background: #444; color: white;
+    border: none; padding: 15px; border-radius: 12px;
+    font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px;
 }
-.modal-card {
-    background: #000; width: 85%; border-radius: 20px; padding: 20px;
-    color: white; text-align: center;
+#add-set-btn { background: #aaa; color: #000; }
+
+.time-picker { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+.time-picker select { padding: 15px; border-radius: 8px; font-size: 1rem; }
+
+/* Modal */
+#modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    display: flex; justify-content: center; align-items: center; z-index: 1000;
 }
-.toggle-container { display: flex; border: 1px solid white; border-radius: 10px; margin: 15px 0; overflow: hidden;}
-.toggle-btn { flex: 1; background: none; color: white; border: none; padding: 10px; cursor: pointer;}
-.toggle-btn.active { background: #888; }
+.modal-content {
+    background: black; width: 90%; max-width: 400px; padding: 25px;
+    border-radius: 20px; color: white; text-align: center;
+}
+#modal-name { width: 100%; padding: 15px; font-size: 1.2rem; border-radius: 8px; border: none; margin-bottom: 15px; }
 
-.val-display { font-size: 3rem; margin: 20px 0; display: flex; justify-content: space-around; align-items: center;}
-.val-display button { background: none; color: white; border: none; font-size: 2rem;}
+.modal-toggles { display: flex; border: 2px solid white; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+.modal-toggles button { flex: 1; background: black; color: white; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
+.modal-toggles button.active { background: #555; }
 
-.save-btn { background: #2ecc71; border: none; padding: 15px; border-radius: 10px; width: 70%; font-weight: bold;}
-.delete-btn { background: #e74c3c; border: none; padding: 15px; border-radius: 10px; width: 25%; }
+.modal-counter { display: flex; justify-content: space-between; align-items: center; font-size: 3rem; margin-bottom: 20px;}
+.modal-counter button { background: none; border: none; color: white; font-size: 2.5rem; cursor: pointer;}
 
-/* Sticky Footer */
-.sticky-footer { position: fixed; bottom: 0; left:0; width: 100%; background: white; border-top: 1px solid #ddd;}
-.progress-container { height: 8px; background: #eee; width: 100%; }
-#main-progress-bar { height: 100%; background: var(--accent); transition: 0.3s; }
-.footer-btns { display: flex; padding: 15px; gap: 10px; padding-bottom: env(safe-area-inset-bottom);}
-.btn-footer-pri { flex: 2; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 15px;}
-.btn-footer-sec { flex: 1; background: #eee; border: none; border-radius: 10px;}
+.modal-actions { display: flex; gap: 10px; }
+#modal-save { flex: 3; background: #2ecc71; color: black; font-weight: bold; border: none; border-radius: 8px; padding: 15px; font-size: 1.2rem; cursor: pointer;}
+#modal-close { flex: 1; background: #e74c3c; border: none; border-radius: 8px; font-size: 1.5rem; cursor: pointer;}
 
-.hidden { display: none; }
-
+/* The safety class */
+.hidden { display: none !important; }
