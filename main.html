@@ -2,61 +2,64 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>WorkoutKeep</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WorkoutKeeper</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body data-theme="purple">
-    <div id="app-shell">
+<body>
+    <div id="app-wrapper">
         <header>
-            <h1 id="brand-title">WorkoutKeeper</h1>
-            <input type="text" id="workout-name-input" placeholder="Name Your Workout" class="ghost-input">
-            <div class="theme-picker">
-                <div class="dot purple active" data-color="purple"></div>
-                <div class="dot teal" data-color="teal"></div>
-                <div class="dot orange" data-color="orange"></div>
-                <div class="dot pink" data-color="pink"></div>
-                <div class="dot blue" data-color="blue"></div>
+            <h1>WorkoutKeeper</h1>
+            <input type="text" id="workout-name" placeholder="Name Your Workout...">
+            
+            <div id="theme-selector">
+                <div class="theme-dot purple" data-theme="purple"></div>
+                <div class="theme-dot teal" data-theme="teal"></div>
+                <div class="theme-dot orange" data-theme="orange"></div>
+                <div class="theme-dot pink" data-theme="pink"></div>
+                <div class="theme-dot blue" data-theme="blue"></div>
+                <div class="theme-dot black" data-theme="black"></div>
             </div>
         </header>
 
-        <main id="builder-area">
-            </main>
+        <main id="sets-container"></main>
 
-        <div class="action-area">
-            <button class="btn-secondary full-width" id="add-set-btn">+ New Set</button>
-            
-            <div class="est-time-container">
+        <div class="bottom-controls">
+            <button id="add-set-btn">+ New Set</button>
+            <div class="time-picker">
                 <label>Estimated Time</label>
-                <select id="est-time-select">
-                    <option>5 minutes</option>
-                    <option>10 minutes</option>
-                    <option>15-20 minutes</option>
-                    <option>20-30 minutes</option>
-                    <option>30-45 minutes</option>
-                    <option>45-60 minutes</option>
-                    <option>1-1.5 hours</option>
-                    <option>1.5-2 hours</option>
+                <select id="time-select">
+                    <option value="5m">5 minutes</option>
+                    <option value="10m">10 minutes</option>
+                    <option value="20m">15-20 minutes</option>
+                    <option value="30m">20-30 minutes</option>
+                    <option value="45m">30-45 minutes</option>
+                    <option value="60m">45-60 minutes</option>
+                    <option value="90m">1-1.5 hours</option>
+                    <option value="120m" selected>1.5-2 hours</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <div id="ex-modal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <input type="text" id="modal-ex-name" placeholder="Name Exercise">
-            <div class="toggle-container">
-                <button id="mode-reps" class="toggle-btn active">REPS<br><small>count</small></button>
-                <button id="mode-timed" class="toggle-btn">TIMED<br><small>seconds</small></button>
+    <div id="modal-overlay" class="hidden">
+        <div class="modal-content">
+            <input type="text" id="modal-name" placeholder="Name Exercise">
+            
+            <div class="modal-toggles">
+                <button id="toggle-reps" class="active">REPS<br><small>count</small></button>
+                <button id="toggle-timed">TIMED<br><small>seconds</small></button>
             </div>
-            <div class="val-display">
-                <button id="val-minus">-</button>
-                <span id="modal-val">10</span>
-                <button id="val-plus">+</button>
+
+            <div class="modal-counter">
+                <button id="counter-minus">-</button>
+                <span id="counter-value">10</span>
+                <button id="counter-plus">+</button>
             </div>
+
             <div class="modal-actions">
-                <button class="save-btn" id="modal-save">SAVE</button>
-                <button class="delete-btn" id="modal-close">Close</button>
+                <button id="modal-save">SAVE</button>
+                <button id="modal-close">🗑️</button>
             </div>
         </div>
     </div>
