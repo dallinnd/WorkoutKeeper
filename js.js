@@ -96,7 +96,7 @@ function setupThemeSelector() {
 function renderCalendar() {
     const grid = document.getElementById('calendar-grid');
     if(!grid) return; 
-    grid.innerHTML = '<div class="calendar-grid-header"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+    grid.innerHTML = ''; // Clear previous grid
     
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -105,27 +105,37 @@ function renderCalendar() {
     
     document.getElementById('month-display').innerText = new Date(year, month).toLocaleDateString('default', { month: 'long', year: 'numeric' });
 
-    const dayContainer = document.createElement('div');
-    dayContainer.className = 'calendar-grid';
+    // 1. ADD HEADERS DIRECTLY TO GRID FOR PERFECT ALIGNMENT
+    const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    daysOfWeek.forEach(day => {
+        const el = document.createElement('div');
+        el.className = 'day-cell header';
+        el.innerText = day;
+        grid.appendChild(el);
+    });
 
+    // 2. ADD EMPTY SPACES FOR FIRST WEEK
     for(let i = 0; i < firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
-        dayContainer.appendChild(empty);
+        grid.appendChild(empty);
     }
 
+    // 3. ADD CALENDAR DAYS
     for(let i = 1; i <= daysInMonth; i++) {
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const cell = document.createElement('div');
         
         let classes = 'day-cell';
         if (dateStr === selectedDateStr) classes += ' current-selected';
+        
         const hasWorkouts = appData.schedule[dateStr] && appData.schedule[dateStr].length > 0;
         if (hasWorkouts) classes += ' active-scheduled';
         
         cell.className = classes;
         cell.innerText = i;
         
+        // Add dot if workout exists
         if(hasWorkouts) {
             const dot = document.createElement('div');
             dot.className = 'dot';
@@ -137,9 +147,9 @@ function renderCalendar() {
             renderCalendar();
             showDailySchedule(dateStr);
         });
-        dayContainer.appendChild(cell);
+        
+        grid.appendChild(cell);
     }
-    grid.appendChild(dayContainer);
 }
 
 document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
