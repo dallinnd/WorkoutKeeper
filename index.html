@@ -39,6 +39,8 @@
                     <option value="120m" selected>1.5-2 hours</option>
                 </select>
             </div>
+            
+            <button id="save-workout-btn">Save & Export Workout</button>
         </div>
     </div>
 
@@ -47,8 +49,13 @@
             <input type="text" id="modal-name" placeholder="Name Exercise">
             
             <div class="modal-toggles">
-                <button id="toggle-reps" class="active">REPS<br><small>count</small></button>
-                <button id="toggle-timed">TIMED<br><small>seconds</small></button>
+                <button id="toggle-reps" class="active">REPS</button>
+                <button id="toggle-timed">TIMED</button>
+            </div>
+
+            <div id="time-unit-container" class="hidden">
+                <button id="unit-sec" class="unit-btn active">Seconds</button>
+                <button id="unit-min" class="unit-btn">Minutes</button>
             </div>
 
             <div class="modal-counter">
@@ -67,4 +74,3 @@
     <script src="js.js"></script>
 </body>
 </html>
-
