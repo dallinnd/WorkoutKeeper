@@ -62,6 +62,14 @@ header h1 { margin-top: 0; }
 .time-picker { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
 .time-picker select { padding: 15px; border-radius: 8px; font-size: 1rem; }
 
+/* Save Workout Button */
+#save-workout-btn {
+    width: 100%; background: var(--accent); color: white;
+    border: none; padding: 18px; border-radius: 12px;
+    font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
 /* Modal */
 #modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.8);
@@ -76,6 +84,16 @@ header h1 { margin-top: 0; }
 .modal-toggles { display: flex; border: 2px solid white; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
 .modal-toggles button { flex: 1; background: black; color: white; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
 .modal-toggles button.active { background: #555; }
+
+/* Time Unit Toggle in Modal */
+#time-unit-container {
+    display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;
+}
+.unit-btn {
+    background: #333; color: white; border: 2px solid transparent; 
+    padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold;
+}
+.unit-btn.active { border-color: white; background: #666; }
 
 .modal-counter { display: flex; justify-content: space-between; align-items: center; font-size: 3rem; margin-bottom: 20px;}
 .modal-counter button { background: none; border: none; color: white; font-size: 2.5rem; cursor: pointer;}
