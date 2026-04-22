@@ -27,15 +27,15 @@
                     <h2 id="month-display">April</h2>
                     <button id="next-month">&gt;</button>
                 </div>
-                <div class="calendar-grid">
+                <div id="calendar-grid" class="calendar-grid">
                     </div>
             </div>
         </section>
 
         <section id="view-builder" class="view hidden">
             <header>
-                <h1>Name</h1>
-                <p>Color Theme</p>
+                <input type="text" id="workout-name" placeholder="Name Your Workout" class="heading-input">
+                <p style="color: #888; margin-bottom: 10px;">Color Theme</p>
                 <div id="theme-selector">
                     <div class="theme-dot purple" data-theme="purple"></div>
                     <div class="theme-dot teal" data-theme="teal"></div>
@@ -46,7 +46,6 @@
                 </div>
             </header>
             
-            <input type="text" id="workout-name" placeholder="Name Your Workout..." class="hidden">
             <main id="sets-container"></main>
             
             <button id="add-set-btn" class="btn-new-set">+ New Set</button>
@@ -65,17 +64,18 @@
                 </select>
             </div>
 
-            <button id="save-to-library-btn" class="btn-save-workout">Save to Library</button>
+            <button id="save-to-library-btn" class="btn-save-green full-width">Save to Library</button>
         </section>
 
         <section id="view-active" class="view hidden">
-            <h2 id="active-workout-title">Workout</h2>
+            <h2 id="active-workout-title" style="font-size: 2.5rem; margin-bottom: 20px;">Workout</h2>
             <div id="active-sets-container"></div>
+            
             <div class="execution-footer">
                 <div class="progress-bar-bg"><div id="active-progress-bar"></div></div>
-                <div class="flex-row mt-10">
-                    <button id="btn-cancel-workout" class="btn-secondary">Quit</button>
-                    <button id="btn-finish-workout" class="btn-primary">Finish</button>
+                <div class="flex-row">
+                    <button id="btn-cancel-workout" class="btn-ghost flex-1" style="color:#e74c3c; border-color:#e74c3c; margin-top:0;">Quit</button>
+                    <button id="btn-finish-workout" class="btn-save-green flex-3">Finish Workout</button>
                 </div>
             </div>
         </section>
@@ -95,9 +95,9 @@
 
     <div id="schedule-modal" class="modal-overlay hidden">
         <div class="modal-content text-center">
-            <h3>Select Workout</h3>
+            <h3 style="color: black; margin-top:0;">Select Workout</h3>
             <div id="library-list"></div>
-            <button id="close-schedule-modal" class="btn-secondary mt-10 full-width">Cancel</button>
+            <button id="close-schedule-modal" class="btn-delete-red full-width mt-10">Cancel</button>
         </div>
     </div>
 
