@@ -57,7 +57,21 @@ body.bg-wash { background-color: var(--accent-bg-wash); }
 .workout-time-block .val { font-size: 1.5rem; font-weight: bold; display: block;}
 .workout-time-block .lbl { font-size: 0.8rem; }
 .calendar-container { background-color: var(--black); border-radius: 30px; padding: 25px; margin-top: 20px; }
-.calendar-header { display: flex; justify-content: space-between; align-items: center; color: var(--white); margin-bottom: 20px;}
+/* Modern Arrow button alignment */
+.calendar-header button { 
+    background: none; border: none; color: white; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; padding: 5px; transition: 0.2s;
+}
+.calendar-header button:active { opacity: 0.5; transform: scale(0.9); }
+
+/* Day Header alignment fix */
+.day-cell.header {
+    background: transparent;
+    color: #888;
+    font-size: 0.9rem;
+    cursor: default;
+    border: none;
+}
 .calendar-grid-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 0.8rem; margin-bottom: 10px; color: white;}
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
 .day-cell { aspect-ratio: 1; border-radius: 50%; background-color: var(--green-card); color: var(--black); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; cursor: pointer; position: relative; }
