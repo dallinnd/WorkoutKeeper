@@ -16,8 +16,7 @@
 
             <div id="daily-schedule">
                 <h2 id="selected-date-title">Today</h2>
-                <div id="scheduled-workouts-list">
-                    </div>
+                <div id="scheduled-workouts-list"></div>
                 <button id="btn-schedule-new" class="btn-ghost hidden">+ Schedule Workout</button>
             </div>
 
@@ -27,7 +26,29 @@
                     <h2 id="month-display">April</h2>
                     <button id="next-month">&gt;</button>
                 </div>
-                <div id="calendar-grid" class="calendar-grid">
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+        </section>
+
+        <section id="view-preview" class="view hidden">
+            <div class="preview-nav">
+                <button id="btn-back-schedule" class="btn-circle-back">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <button id="btn-start-workout" class="btn-start-pill">Start</button>
+            </div>
+            
+            <div class="preview-card">
+                <p class="section-label">Overview</p>
+                <h2 id="preview-title" class="theme-text-color">Workout Name</h2>
+                
+                <p class="section-label mt-15">Estimated Time</p>
+                <div class="est-time-block">
+                    <div class="time-bubble" id="preview-time">1.5 - 2</div>
+                    <span class="time-label">hours</span>
+                </div>
+
+                <div id="preview-sets-container">
                     </div>
             </div>
         </section>
@@ -47,37 +68,29 @@
             </header>
             
             <main id="sets-container"></main>
-            
             <button id="add-set-btn" class="btn-new-set">+ New Set</button>
             
             <div class="time-picker-inline">
                 <label>Estimated Time</label>
                 <select id="time-select">
-                    <option value="5">5 mins</option>
-                    <option value="10">10 mins</option>
-                    <option value="20">15-20 mins</option>
-                    <option value="30">20-30 mins</option>
-                    <option value="45">30-45 mins</option>
-                    <option value="60">45-60 mins</option>
-                    <option value="90">1-1.5 hours</option>
-                    <option value="120" selected>1.5-2 hours</option>
+                    <option value="5 mins">5 mins</option>
+                    <option value="10 mins">10 mins</option>
+                    <option value="15-20 mins">15-20 mins</option>
+                    <option value="30-45 mins">30-45 mins</option>
+                    <option value="1.5 - 2 hours" selected>1.5 - 2 hours</option>
                 </select>
             </div>
-
             <button id="save-to-library-btn" class="btn-save-green full-width">Save to Library</button>
         </section>
 
         <section id="view-active" class="view hidden">
-            <h2 id="active-workout-title" style="font-size: 2.5rem; margin-bottom: 20px;">Workout</h2>
-            <div id="active-sets-container"></div>
+            <header class="active-header">
+                <h2 id="active-workout-title" class="theme-text-color">Workout</h2>
+                <button id="btn-cancel-workout" class="btn-ghost-small">Quit</button>
+            </header>
             
-            <div class="execution-footer">
-                <div class="progress-bar-bg"><div id="active-progress-bar"></div></div>
-                <div class="flex-row">
-                    <button id="btn-cancel-workout" class="btn-ghost flex-1" style="color:#e74c3c; border-color:#e74c3c; margin-top:0;">Quit</button>
-                    <button id="btn-finish-workout" class="btn-save-green flex-3">Finish Workout</button>
+            <div id="active-sets-container" class="active-scroll-area">
                 </div>
-            </div>
         </section>
 
         <nav id="bottom-nav">
@@ -106,8 +119,8 @@
             <h3 style="color: black; margin-top: 0;">Name Exercise</h3>
             <input type="text" id="modal-name" placeholder="Pushups">
             <div class="modal-toggles">
-                <button id="toggle-reps" class="active">REPS<br><small>count</small></button>
-                <button id="toggle-timed">TIMED<br><small>seconds</small></button>
+                <button id="toggle-reps" class="active">REPS</button>
+                <button id="toggle-timed">TIMED</button>
             </div>
             <div id="time-unit-container" class="hidden">
                 <button id="unit-sec" class="unit-btn active">Seconds</button>
@@ -120,9 +133,7 @@
             </div>
             <div class="flex-row">
                 <button id="modal-save" class="btn-save-green flex-3">SAVE</button>
-                <button id="modal-close" class="btn-delete-red flex-1">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
+                <button id="modal-close" class="btn-delete-red flex-1">X</button>
             </div>
         </div>
     </div>
