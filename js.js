@@ -3,8 +3,16 @@ let appData = {
     schedule: {} 
 };
 
+// 1. Helper to get Local Date Strings (Fixes the "Today" offset bug)
+function getLocalYYYYMMDD(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 let currentDate = new Date(); 
-let selectedDateStr = currentDate.toISOString().split('T')[0]; 
+let selectedDateStr = getLocalYYYYMMDD(currentDate); // Automatically selects TODAY
 let builderState = { name: "", time: "10", sets: [] };
 
 // Execution Engine State
@@ -13,37 +21,36 @@ let activeTimers = {};
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_final');
+        const saved = localStorage.getItem('wk_data_v3');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
-    // Auto-populate library for testing if empty
-    if(appData.library.length === 0) {
-        appData.library.push({id: 'w1', name: 'Workout #1', time: '5', sets: []});
-        appData.library.push({id: 'w2', name: 'Wednesday Evening', time: '10', sets: []});
+    // Clean up schedule (remove empty arrays that cause ghost dots)
+    for (let date in appData.schedule) {
+        if (appData.schedule[date].length === 0) {
+            delete appData.schedule[date];
+        }
     }
 
     setupRouter();
+    setupThemeSelector();
     renderCalendar();
     showDailySchedule(selectedDateStr);
 });
 
 function saveData() {
-    localStorage.setItem('wk_data_final', JSON.stringify(appData));
+    localStorage.setItem('wk_data_v3', JSON.stringify(appData));
 }
 
-// --- VIEW ROUTER ---
-// Central logic to switch between pages and hide nav bars properly
+// --- ROUTER & THEMES ---
 function switchView(targetId) {
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     document.getElementById(targetId).classList.remove('hidden');
     
-    // Update navigation dots
     document.querySelectorAll('.nav-btn').forEach(b => {
         if(b.dataset.target) b.classList.toggle('active', b.dataset.target === targetId);
     });
 
-    // Handle Themes & Bottom Nav Visibility
     document.getElementById('bottom-nav').style.display = (targetId === 'view-active') ? 'none' : 'flex';
 
     if(targetId === 'view-calendar') {
@@ -63,6 +70,19 @@ function setupRouter() {
         });
     });
     document.body.classList.add('bg-green');
+    document.body.setAttribute('data-theme', 'purple'); // Default theme
+}
+
+// Fix 3: Theme Selector logic
+function setupThemeSelector() {
+    document.querySelectorAll('.theme-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+            const color = e.target.dataset.theme;
+            document.body.setAttribute('data-theme', color);
+            document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+            e.target.classList.add('active');
+        });
+    });
 }
 
 // --- CALENDAR LOGIC ---
@@ -71,32 +91,41 @@ function renderCalendar() {
     if(!grid) return; 
     grid.innerHTML = '';
     
+    // Add Days of Week Header
+    grid.innerHTML = '<div class="calendar-grid-header"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+    
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDay = new Date(year, month, 1).getDay();
     
-    document.getElementById('month-display').innerText = new Date(year, month).toLocaleDateString('default', { month: 'long' });
+    document.getElementById('month-display').innerText = new Date(year, month).toLocaleDateString('default', { month: 'long', year: 'numeric' });
+
+    const dayContainer = document.createElement('div');
+    dayContainer.className = 'calendar-grid';
 
     for(let i = 0; i < firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
-        grid.appendChild(empty);
+        dayContainer.appendChild(empty);
     }
 
     for(let i = 1; i <= daysInMonth; i++) {
+        // Build local date string
         const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const cell = document.createElement('div');
         
         let classes = 'day-cell';
         if (dateStr === selectedDateStr) classes += ' current-selected';
-        else if (appData.schedule[dateStr] && appData.schedule[dateStr].length > 0) classes += ' active-scheduled';
+        
+        // Fix 5: Dots only appear if workouts actually exist in the array
+        const hasWorkouts = appData.schedule[dateStr] && appData.schedule[dateStr].length > 0;
+        if (hasWorkouts) classes += ' active-scheduled';
         
         cell.className = classes;
         cell.innerText = i;
         
-        // Add indicator dot
-        if(appData.schedule[dateStr] && appData.schedule[dateStr].length > 0) {
+        if(hasWorkouts) {
             const dot = document.createElement('div');
             dot.className = 'dot';
             cell.appendChild(dot);
@@ -108,16 +137,24 @@ function renderCalendar() {
             showDailySchedule(dateStr);
         });
 
-        grid.appendChild(cell);
+        dayContainer.appendChild(cell);
     }
+    grid.appendChild(dayContainer);
 }
 
-document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
-document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+// Fix 7: Calendar Arrows
+document.getElementById('prev-month').addEventListener('click', () => { 
+    currentDate.setMonth(currentDate.getMonth() - 1); 
+    renderCalendar(); 
+});
+document.getElementById('next-month').addEventListener('click', () => { 
+    currentDate.setMonth(currentDate.getMonth() + 1); 
+    renderCalendar(); 
+});
 
 // --- SCHEDULE CARDS ---
 function showDailySchedule(dateStr) {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalYYYYMMDD(new Date());
     document.getElementById('selected-date-title').innerText = (dateStr === todayStr) ? "Today" : `Schedule for ${dateStr}`;
     
     const list = document.getElementById('scheduled-workouts-list');
@@ -137,7 +174,6 @@ function showDailySchedule(dateStr) {
                     <span class="lbl">mins</span>
                 </div>
             `;
-            // Trigger Live Tracker when clicked
             card.addEventListener('click', () => startWorkout(workout.id));
             list.appendChild(card);
         }
@@ -146,7 +182,7 @@ function showDailySchedule(dateStr) {
     document.getElementById('btn-schedule-new').classList.remove('hidden');
 }
 
-// Scheduling a new workout from library
+// Fix 4: Scheduling Workouts correctly
 document.getElementById('btn-schedule-new').addEventListener('click', () => {
     const list = document.getElementById('library-list');
     list.innerHTML = '';
@@ -187,16 +223,22 @@ document.getElementById('save-to-library-btn').addEventListener('click', () => {
         id: 'wk_' + Date.now(),
         name: wName,
         time: wTime,
-        sets: JSON.parse(JSON.stringify(builderState.sets)) // Deep copy
+        sets: JSON.parse(JSON.stringify(builderState.sets)) 
     });
     saveData();
 
-    // Reset Builder and Return Home!
     builderState = { name: "", time: "10", sets: [] };
     document.getElementById('workout-name').value = "";
     alert("Workout Saved to Library!");
     switchView('view-calendar');
 });
+
+// Fix 2: Up/Down Counter for Set Multiplier
+window.changeSetRepeat = function(setIdx, delta) {
+    const current = builderState.sets[setIdx].repeat;
+    builderState.sets[setIdx].repeat = Math.max(1, current + delta); // Cannot go below 1
+    renderBuilder();
+};
 
 function renderBuilder() {
     const container = document.getElementById('sets-container');
@@ -208,11 +250,11 @@ function renderBuilder() {
         card.innerHTML = `
             <div class="set-header">
                 <span>Set ${idx + 1}</span>
-                <div>x <select onchange="builderState.sets[${idx}].repeat = parseInt(this.value)">
-                    <option ${set.repeat===1?'selected':''}>1</option>
-                    <option ${set.repeat===2?'selected':''}>2</option>
-                    <option ${set.repeat===3?'selected':''}>3</option>
-                </select></div>
+                <div class="set-counter">
+                    <button onclick="changeSetRepeat(${idx}, -1)">-</button>
+                    <span>x${set.repeat}</span>
+                    <button onclick="changeSetRepeat(${idx}, 1)">+</button>
+                </div>
             </div>
             ${set.exercises.map(ex => `<div class="exercise-row"><span>${ex.name}</span><span>${ex.val} ${ex.label} <span style="color:#888; margin-left:10px;">✏️</span></span></div>`).join('')}
             <button class="btn-add-ex full-width" onclick="openModal(${idx})">+ New Exercise</button>
@@ -221,7 +263,7 @@ function renderBuilder() {
     });
 }
 
-// Modal Editor
+// Modal Editor (Retained)
 let targetSet = null, mMode = 'reps', mVal = 10, timeUnit = 'sec';
 window.openModal = function(idx) { targetSet = idx; document.getElementById('modal-overlay').classList.remove('hidden'); }
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
@@ -246,20 +288,19 @@ document.getElementById('modal-save').onclick = () => {
 }
 
 // --- LIVE WORKOUT EXECUTION ENGINE ---
+// Fix 1: Timed Exercises Logic
 window.startWorkout = function(id) {
     const template = appData.library.find(w => w.id === id);
     if(!template) return;
 
-    activeSession = {
-        name: template.name, total: 0, completed: 0, tasks: []
-    };
+    activeSession = { name: template.name, total: 0, completed: 0, tasks: [] };
 
     template.sets.forEach((set, sIdx) => {
         for(let r=0; r<set.repeat; r++) {
             set.exercises.forEach((ex, eIdx) => {
                 activeSession.total++;
                 activeSession.tasks.push({
-                    id: `t_${sIdx}_${r}_${eIdx}`,
+                    id: `t_${sIdx}_${r}_${eIdx}_${Date.now()}`, // Unique IDs
                     name: ex.name,
                     type: ex.type,
                     val: ex.val,
@@ -290,7 +331,7 @@ function renderActiveWorkout() {
         
         let btnHTML = '';
         if(t.type === 'reps') {
-            btnHTML = `<button class="${t.done ? 'btn-save-green' : 'btn-ghost'}" style="width:auto;margin:0;padding:10px 20px;border-width:2px;" onclick="toggleTask('${t.id}')">${t.done ? 'Done' : 'Complete'}</button>`;
+            btnHTML = `<button class="${t.done ? 'btn-save-green' : 'btn-ghost'}" style="width:auto;margin:0;padding:10px 20px;border-width:2px; color:${t.done ? 'black' : 'white'}; border-color:white;" onclick="toggleTask('${t.id}')">${t.done ? 'Done' : 'Complete'}</button>`;
         } else {
             if(t.done) {
                 btnHTML = `<button class="btn-save-green" style="width:auto;margin:0;padding:10px 20px">00:00</button>`;
@@ -298,7 +339,7 @@ function renderActiveWorkout() {
                 const isRunning = !!activeTimers[t.id];
                 const bg = isRunning ? '#2ecc71' : '#e74c3c';
                 const format = secs => `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
-                btnHTML = `<button style="background:${bg};color:white;border:none;border-radius:12px;padding:10px 20px;font-weight:bold;cursor:pointer;" onclick="toggleTimer('${t.id}')">${format(t.timeLeft)}</button>`;
+                btnHTML = `<button style="background:${bg};color:${isRunning ? 'black' : 'white'};border:none;border-radius:12px;padding:10px 20px;font-weight:bold;cursor:pointer;" onclick="toggleTimer('${t.id}')">${format(t.timeLeft)}</button>`;
             }
         }
 
@@ -328,10 +369,12 @@ window.toggleTimer = function(id) {
     if(t.done) return;
 
     if(activeTimers[id]) {
+        // Pause Timer
         clearInterval(activeTimers[id]);
         delete activeTimers[id];
         renderActiveWorkout();
     } else {
+        // Start Timer
         activeTimers[id] = setInterval(() => {
             t.timeLeft--;
             if(t.timeLeft <= 0) {
@@ -342,7 +385,7 @@ window.toggleTimer = function(id) {
             }
             renderActiveWorkout();
         }, 1000);
-        renderActiveWorkout(); // Force green running state
+        renderActiveWorkout(); 
     }
 };
 
