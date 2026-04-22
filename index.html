@@ -6,67 +6,83 @@
     <title>WorkoutKeeper</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-purple">
     <div id="app-wrapper">
         <header>
-            <h1>WorkoutKeeper</h1>
-            <input type="text" id="workout-name" placeholder="Name Your Workout...">
-            
-            <div id="theme-selector">
-                <div class="theme-dot purple" data-theme="purple"></div>
-                <div class="theme-dot teal" data-theme="teal"></div>
-                <div class="theme-dot orange" data-theme="orange"></div>
-                <div class="theme-dot pink" data-theme="pink"></div>
-                <div class="theme-dot blue" data-theme="blue"></div>
-                <div class="theme-dot black" data-theme="black"></div>
-            </div>
+            <h1 id="app-title">WorkoutKeeper</h1>
         </header>
 
-        <main id="sets-container"></main>
-
-        <div class="bottom-controls">
-            <button id="add-set-btn">+ New Set</button>
-            <div class="time-picker">
-                <label>Estimated Time</label>
-                <select id="time-select">
-                    <option value="5m">5 minutes</option>
-                    <option value="10m">10 minutes</option>
-                    <option value="20m">15-20 minutes</option>
-                    <option value="30m">20-30 minutes</option>
-                    <option value="45m">30-45 minutes</option>
-                    <option value="60m">45-60 minutes</option>
-                    <option value="90m">1-1.5 hours</option>
-                    <option value="120m" selected>1.5-2 hours</option>
-                </select>
+        <section id="view-calendar" class="view active">
+            <div class="calendar-header">
+                <button id="prev-month">&lt;</button>
+                <h2 id="month-display">April 2026</h2>
+                <button id="next-month">&gt;</button>
             </div>
+            <div class="calendar-grid-header">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+
+            <div id="daily-schedule" class="hidden">
+                <h3 id="selected-date-title">Schedule for...</h3>
+                <div id="scheduled-workouts-list"></div>
+                <button id="btn-schedule-new" class="btn-primary full-width mt-10">Schedule a Workout</button>
+            </div>
+        </section>
+
+        <section id="view-builder" class="view hidden">
+            <input type="text" id="workout-name" placeholder="Name Your Workout...">
+            <main id="sets-container"></main>
+            <button id="add-set-btn" class="btn-secondary full-width">+ New Set</button>
+            <button id="save-to-library-btn" class="btn-primary full-width mt-10">Save to Library</button>
+        </section>
+
+        <section id="view-active" class="view hidden">
+            <h2 id="active-workout-title">Workout</h2>
+            <div id="active-sets-container"></div>
             
-            <button id="save-workout-btn">Save & Export Workout</button>
+            <div class="execution-footer">
+                <div class="progress-bar-bg"><div id="active-progress-bar"></div></div>
+                <div class="flex-row mt-10">
+                    <button id="btn-cancel-workout" class="btn-secondary">Quit</button>
+                    <button id="btn-finish-workout" class="btn-primary">Finish Workout</button>
+                </div>
+            </div>
+        </section>
+
+        <nav id="bottom-nav">
+            <button class="nav-btn active" data-target="view-calendar">📅 Calendar</button>
+            <button class="nav-btn" data-target="view-builder">➕ Create</button>
+        </nav>
+    </div>
+
+    <div id="schedule-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>Select Workout</h3>
+            <div id="library-list"></div>
+            <button id="close-schedule-modal" class="btn-secondary mt-10">Cancel</button>
         </div>
     </div>
 
-    <div id="modal-overlay" class="hidden">
+    <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
             <input type="text" id="modal-name" placeholder="Name Exercise">
-            
             <div class="modal-toggles">
                 <button id="toggle-reps" class="active">REPS</button>
                 <button id="toggle-timed">TIMED</button>
             </div>
-
             <div id="time-unit-container" class="hidden">
                 <button id="unit-sec" class="unit-btn active">Seconds</button>
                 <button id="unit-min" class="unit-btn">Minutes</button>
             </div>
-
             <div class="modal-counter">
                 <button id="counter-minus">-</button>
                 <span id="counter-value">10</span>
                 <button id="counter-plus">+</button>
             </div>
-
-            <div class="modal-actions">
-                <button id="modal-save">SAVE</button>
-                <button id="modal-close">🗑️</button>
+            <div class="flex-row">
+                <button id="modal-save" class="btn-primary flex-3">SAVE</button>
+                <button id="modal-close" class="btn-secondary flex-1">🗑️</button>
             </div>
         </div>
     </div>
