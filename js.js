@@ -11,18 +11,21 @@ let currentDate = new Date();
 let selectedDateStr = getLocalYYYYMMDD(currentDate); 
 let builderState = { name: "", time: "1.5 - 2 hours", sets: [] };
 
-let activePreviewId = null;
+// Execution Engine State
+let activePreviewInstance = null; // Used to track which scheduled item we are previewing
 let activeSession = null;
 let activeTimers = {};
 
 const clockIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+const checkIcon = `<span style="color:#2ecc71; font-weight:bold; margin-right:10px;">✓</span>`;
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_v5');
+        const saved = localStorage.getItem('wk_data_v6');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
+    // Data Migration & Default Injection
     if(appData.library.length === 0) {
         appData.library.push({
             id: 'w1', name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
@@ -31,7 +34,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 {name: 'Planks', type: 'timed', val: 10, label: 'sec'}
             ]}]
         });
-        appData.schedule[selectedDateStr] = ['w1'];
+        appData.schedule[selectedDateStr] = [{ id: 'w1', instanceId: Date.now(), completed: false }];
+    }
+
+    // Safely migrate old schedule formats (Strings -> Objects)
+    for(let date in appData.schedule) {
+        appData.schedule[date] = appData.schedule[date].map(item => {
+            if(typeof item === 'string') return { id: item, instanceId: Date.now() + Math.random(), completed: false };
+            return item;
+        });
     }
 
     setupRouter();
@@ -40,7 +51,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showDailySchedule(selectedDateStr);
 });
 
-function saveData() { localStorage.setItem('wk_data_v5', JSON.stringify(appData)); }
+function saveData() { localStorage.setItem('wk_data_v6', JSON.stringify(appData)); }
 
 // --- ROUTER & THEMES ---
 function switchView(targetId) {
@@ -52,8 +63,8 @@ function switchView(targetId) {
     });
 
     document.getElementById('bottom-nav').style.display = (targetId === 'view-preview' || targetId === 'view-active') ? 'none' : 'flex';
-
     document.body.classList.remove('bg-green', 'bg-wash');
+    
     if(targetId === 'view-calendar') {
         document.body.classList.add('bg-green');
         renderCalendar();
@@ -90,7 +101,7 @@ function setupThemeSelector() {
 function renderCalendar() {
     const grid = document.getElementById('calendar-grid');
     if(!grid) return; 
-    grid.innerHTML = ''; 
+    grid.innerHTML = '<div class="calendar-grid-header"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
     
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -99,18 +110,13 @@ function renderCalendar() {
     
     document.getElementById('month-display').innerText = new Date(year, month).toLocaleDateString('default', { month: 'long', year: 'numeric' });
 
-    const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-    daysOfWeek.forEach(day => {
-        const el = document.createElement('div');
-        el.className = 'day-cell header';
-        el.innerText = day;
-        grid.appendChild(el);
-    });
+    const dayContainer = document.createElement('div');
+    dayContainer.className = 'calendar-grid';
 
     for(let i = 0; i < firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
-        grid.appendChild(empty);
+        dayContainer.appendChild(empty);
     }
 
     for(let i = 1; i <= daysInMonth; i++) {
@@ -136,8 +142,9 @@ function renderCalendar() {
             renderCalendar();
             showDailySchedule(dateStr);
         });
-        grid.appendChild(cell);
+        dayContainer.appendChild(cell);
     }
+    grid.appendChild(dayContainer);
 }
 
 document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
@@ -148,17 +155,19 @@ function showDailySchedule(dateStr) {
     document.getElementById('selected-date-title').innerText = (dateStr === todayStr) ? "Today" : `Schedule for ${dateStr}`;
     const list = document.getElementById('scheduled-workouts-list');
     list.innerHTML = '';
-    const scheduledIds = appData.schedule[dateStr] || [];
-    scheduledIds.forEach(id => {
-        const workout = appData.library.find(w => w.id === id);
+    
+    const scheduledItems = appData.schedule[dateStr] || [];
+    scheduledItems.forEach(item => {
+        const workout = appData.library.find(w => w.id === item.id);
         if(workout) {
             const card = document.createElement('div');
             card.className = 'workout-card';
             card.innerHTML = `
-                <h3>${workout.name}</h3>
+                <h3>${item.completed ? checkIcon : ''}${workout.name}</h3>
                 <div class="workout-time-block"><span class="val">${workout.time.split(' ')[0]}</span></div>
             `;
-            card.addEventListener('click', () => openPreview(workout.id));
+            // Pass the instance ID to the preview so we know which one to mark complete
+            card.addEventListener('click', () => openPreview(item.instanceId, workout.id));
             list.appendChild(card);
         }
     });
@@ -177,7 +186,8 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
-                appData.schedule[selectedDateStr].push(w.id);
+                // Store object instead of string
+                appData.schedule[selectedDateStr].push({ id: w.id, instanceId: Date.now(), completed: false });
                 saveData();
                 document.getElementById('schedule-modal').classList.add('hidden');
                 renderCalendar();
@@ -191,10 +201,11 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
 document.getElementById('close-schedule-modal').addEventListener('click', () => document.getElementById('schedule-modal').classList.add('hidden'));
 
 // --- PREVIEW SCREEN ---
-function openPreview(workoutId) {
+function openPreview(instanceId, workoutId) {
     const w = appData.library.find(x => x.id === workoutId);
     if(!w) return;
-    activePreviewId = w.id;
+    
+    activePreviewInstance = { instanceId: instanceId, workoutId: workoutId };
 
     document.body.setAttribute('data-theme', w.theme || 'purple');
     document.getElementById('preview-title').innerText = w.name;
@@ -219,18 +230,21 @@ function openPreview(workoutId) {
 }
 
 document.getElementById('btn-back-schedule').addEventListener('click', () => switchView('view-calendar'));
-document.getElementById('btn-start-workout').addEventListener('click', () => startWorkout(activePreviewId));
+document.getElementById('btn-start-workout').addEventListener('click', () => startWorkout(activePreviewInstance));
 
 // --- ACTIVE WORKOUT ENGINE ---
-window.startWorkout = function(id) {
-    const template = appData.library.find(w => w.id === id);
+window.startWorkout = function(previewInstance) {
+    const template = appData.library.find(w => w.id === previewInstance.workoutId);
     if(!template) return;
 
-    activeSession = { name: template.name, currentActiveIndex: 0, sets: [] };
+    activeSession = { 
+        name: template.name, 
+        instanceId: previewInstance.instanceId,
+        sets: [] 
+    };
 
     template.sets.forEach((set, sIdx) => {
         for(let r=0; r<set.repeat; r++) {
-            // Assign unique ID to every exercise so timers don't overlap
             const uniqueExercises = set.exercises.map((ex, eIdx) => ({
                 ...ex,
                 uid: `ex_${sIdx}_${r}_${eIdx}`,
@@ -255,22 +269,19 @@ window.startWorkout = function(id) {
 function renderActiveWorkout() {
     const container = document.getElementById('active-sets-container');
     container.innerHTML = '';
-    
     let completedSetsCount = 0;
 
     activeSession.sets.forEach((set, idx) => {
         if (set.isDone) completedSetsCount++;
         
         const card = document.createElement('div');
-        // Let the user scroll through all. Dim the future ones slightly.
-        card.className = `themed-set-card ${idx > activeSession.currentActiveIndex ? 'faded' : ''}`;
+        card.className = `themed-set-card`; // Stacked cleanly without fading
         
         let exHtml = '';
         set.exercises.forEach(ex => {
             const badgeContent = ex.type === 'timed' ? clockIcon : ex.val;
-            
-            // Smart Timer Logic (Green -> Red -> Gold)
             let timerBtn = '';
+            
             if (ex.type === 'timed') {
                 if (ex.isFinished) {
                     timerBtn = `<button class="btn-timer-finished">00:00</button>`;
@@ -293,20 +304,18 @@ function renderActiveWorkout() {
             `;
         });
 
-        // Set Completion toggle at the bottom
+        // Set Completion Button (White to Green)
         let completeBtn = `<button class="btn-complete-set ${set.isDone ? 'completed' : ''}" onclick="toggleSetComplete('${set.id}')">${set.isDone ? 'Completed' : 'Complete'}</button>`;
 
         card.innerHTML = `<div class="set-card-header"><span>${set.title}</span></div>${exHtml}${completeBtn}`;
         container.appendChild(card);
     });
 
-    // Update Progress Bar
     const pct = activeSession.sets.length === 0 ? 0 : (completedSetsCount / activeSession.sets.length) * 100;
     document.getElementById('active-progress-bar').style.width = pct + '%';
 }
 
 window.toggleExerciseTimer = function(exUid) {
-    // Find exercise
     let foundEx = null;
     for (let s of activeSession.sets) {
         foundEx = s.exercises.find(e => e.uid === exUid);
@@ -328,18 +337,32 @@ window.toggleExerciseTimer = function(exUid) {
             renderActiveWorkout();
         }, 1000);
     }
-    renderActiveWorkout(); // Update to show red state immediately
+    renderActiveWorkout(); 
 };
 
 window.toggleSetComplete = function(setId) {
     const set = activeSession.sets.find(s => s.id === setId);
-    set.isDone = !set.isDone; // Allow toggling on and off
-    
-    // Update active index to the first non-completed set
-    activeSession.currentActiveIndex = activeSession.sets.findIndex(s => !s.isDone);
-    if(activeSession.currentActiveIndex === -1) activeSession.currentActiveIndex = activeSession.sets.length;
-    
+    set.isDone = true; 
     renderActiveWorkout();
+    
+    // Check if ALL sets are done to auto-finish
+    const allSetsDone = activeSession.sets.every(s => s.isDone);
+    if(allSetsDone) {
+        setTimeout(() => {
+            // Find this specific scheduled workout instance and mark it completed
+            const daySchedule = appData.schedule[selectedDateStr];
+            if (daySchedule) {
+                const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
+                if (scheduledItem) {
+                    scheduledItem.completed = true;
+                    saveData();
+                }
+            }
+            Object.values(activeTimers).forEach(clearInterval);
+            activeTimers = {};
+            switchView('view-calendar');
+        }, 500); // 0.5s delay so user sees the final button turn Green
+    }
 };
 
 document.getElementById('btn-cancel-workout').addEventListener('click', () => {
@@ -349,8 +372,15 @@ document.getElementById('btn-cancel-workout').addEventListener('click', () => {
 });
 
 document.getElementById('btn-finish-workout').addEventListener('click', () => {
+    // Manual finish
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
+    const daySchedule = appData.schedule[selectedDateStr];
+    if (daySchedule) {
+        const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
+        if (scheduledItem) scheduledItem.completed = true;
+        saveData();
+    }
     switchView('view-calendar');
 });
 
@@ -404,8 +434,6 @@ window.openModal = function(idx) {
     targetSet = idx; 
     document.getElementById('modal-overlay').classList.remove('hidden'); 
     document.getElementById('modal-name').value = '';
-    
-    // Auto-select REPS and set default to 10
     mMode = 'reps'; mVal = 10;
     document.getElementById('toggle-reps').classList.add('active');
     document.getElementById('toggle-timed').classList.remove('active');
@@ -415,13 +443,13 @@ window.openModal = function(idx) {
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
 
 document.getElementById('toggle-reps').onclick = (e) => { 
-    mMode='reps'; mVal = 10; // Default reps
+    mMode='reps'; mVal = 10; 
     e.target.classList.add('active'); document.getElementById('toggle-timed').classList.remove('active'); 
     document.getElementById('time-unit-container').classList.add('hidden');
     document.getElementById('counter-value').innerText = mVal;
 }
 document.getElementById('toggle-timed').onclick = (e) => { 
-    mMode='timed'; mVal = 30; timeUnit = 'sec'; // Default seconds
+    mMode='timed'; mVal = 30; timeUnit = 'sec'; 
     e.target.classList.add('active'); document.getElementById('toggle-reps').classList.remove('active'); 
     document.getElementById('time-unit-container').classList.remove('hidden');
     document.getElementById('unit-sec').classList.add('active'); document.getElementById('unit-min').classList.remove('active');
