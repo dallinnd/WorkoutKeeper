@@ -9,10 +9,10 @@ function getLocalYYYYMMDD(dateObj) {
 
 let currentDate = new Date(); 
 let selectedDateStr = getLocalYYYYMMDD(currentDate); 
-let builderState = { name: "", time: "1.5 - 2 hours", sets: [] };
+let builderState = { id: null, name: "", time: "1.5 - 2 hours", theme: "purple", sets: [] };
 
 // Execution Engine State
-let activePreviewInstance = null; // Used to track which scheduled item we are previewing
+let activePreviewInstance = null; 
 let activeSession = null;
 let activeTimers = {};
 
@@ -21,28 +21,20 @@ const checkIcon = `<span style="color:#2ecc71; font-weight:bold; margin-right:10
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_v6');
+        const saved = localStorage.getItem('wk_data_v7');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
-    // Data Migration & Default Injection
     if(appData.library.length === 0) {
         appData.library.push({
-            id: 'w1', name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
+            id: 'wk_' + Date.now(), name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
             sets: [{ repeat: 2, exercises: [
                 {name: 'Pushups', type: 'reps', val: 20, label: 'ct'},
                 {name: 'Planks', type: 'timed', val: 10, label: 'sec'}
             ]}]
         });
-        appData.schedule[selectedDateStr] = [{ id: 'w1', instanceId: Date.now(), completed: false }];
-    }
-
-    // Safely migrate old schedule formats (Strings -> Objects)
-    for(let date in appData.schedule) {
-        appData.schedule[date] = appData.schedule[date].map(item => {
-            if(typeof item === 'string') return { id: item, instanceId: Date.now() + Math.random(), completed: false };
-            return item;
-        });
+        appData.schedule[selectedDateStr] = [{ id: appData.library[0].id, instanceId: Date.now(), completed: false }];
+        saveData();
     }
 
     setupRouter();
@@ -51,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showDailySchedule(selectedDateStr);
 });
 
-function saveData() { localStorage.setItem('wk_data_v6', JSON.stringify(appData)); }
+function saveData() { localStorage.setItem('wk_data_v7', JSON.stringify(appData)); }
 
 // --- ROUTER & THEMES ---
 function switchView(targetId) {
@@ -71,8 +63,10 @@ function switchView(targetId) {
         showDailySchedule(selectedDateStr);
     } else if (targetId === 'view-active') {
         document.body.classList.add('bg-wash');
+    } else if (targetId === 'view-profile') {
+        renderProfile();
     } else if (targetId === 'view-builder') {
-        document.body.setAttribute('data-theme', 'purple');
+        document.body.setAttribute('data-theme', builderState.theme || 'purple');
         renderBuilder();
     }
 }
@@ -90,6 +84,7 @@ function setupThemeSelector() {
     document.querySelectorAll('.theme-dot').forEach(dot => {
         dot.addEventListener('click', (e) => {
             const color = e.target.dataset.theme;
+            builderState.theme = color;
             document.body.setAttribute('data-theme', color);
             document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
             e.target.classList.add('active');
@@ -101,7 +96,7 @@ function setupThemeSelector() {
 function renderCalendar() {
     const grid = document.getElementById('calendar-grid');
     if(!grid) return; 
-    grid.innerHTML = '<div class="calendar-grid-header"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+    grid.innerHTML = ''; 
     
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -110,13 +105,10 @@ function renderCalendar() {
     
     document.getElementById('month-display').innerText = new Date(year, month).toLocaleDateString('default', { month: 'long', year: 'numeric' });
 
-    const dayContainer = document.createElement('div');
-    dayContainer.className = 'calendar-grid';
-
     for(let i = 0; i < firstDay; i++) {
         const empty = document.createElement('div');
         empty.className = 'day-cell empty';
-        dayContainer.appendChild(empty);
+        grid.appendChild(empty);
     }
 
     for(let i = 1; i <= daysInMonth; i++) {
@@ -142,9 +134,8 @@ function renderCalendar() {
             renderCalendar();
             showDailySchedule(dateStr);
         });
-        dayContainer.appendChild(cell);
+        grid.appendChild(cell);
     }
-    grid.appendChild(dayContainer);
 }
 
 document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
@@ -166,7 +157,6 @@ function showDailySchedule(dateStr) {
                 <h3>${item.completed ? checkIcon : ''}${workout.name}</h3>
                 <div class="workout-time-block"><span class="val">${workout.time.split(' ')[0]}</span></div>
             `;
-            // Pass the instance ID to the preview so we know which one to mark complete
             card.addEventListener('click', () => openPreview(item.instanceId, workout.id));
             list.appendChild(card);
         }
@@ -174,6 +164,7 @@ function showDailySchedule(dateStr) {
     document.getElementById('btn-schedule-new').classList.remove('hidden');
 }
 
+// Scheduling Modal
 document.getElementById('btn-schedule-new').addEventListener('click', () => {
     const list = document.getElementById('library-list');
     list.innerHTML = '';
@@ -186,7 +177,6 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
-                // Store object instead of string
                 appData.schedule[selectedDateStr].push({ id: w.id, instanceId: Date.now(), completed: false });
                 saveData();
                 document.getElementById('schedule-modal').classList.add('hidden');
@@ -199,6 +189,54 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
     document.getElementById('schedule-modal').classList.remove('hidden');
 });
 document.getElementById('close-schedule-modal').addEventListener('click', () => document.getElementById('schedule-modal').classList.add('hidden'));
+
+// --- PROFILE / LIBRARY (NEW) ---
+function renderProfile() {
+    const list = document.getElementById('profile-library-list');
+    list.innerHTML = '';
+    
+    if(appData.library.length === 0) {
+        list.innerHTML = '<p style="text-align:center;">You have no saved workouts.</p>';
+        return;
+    }
+
+    appData.library.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'profile-card';
+        card.innerHTML = `
+            <h3>${w.name}</h3>
+            <p>${w.time} | Theme: ${w.theme}</p>
+            <div class="profile-actions">
+                <button class="btn-prof-start" onclick="openPreview(Date.now(), '${w.id}')">Start</button>
+                <button class="btn-prof-edit" onclick="editWorkout('${w.id}')">Edit</button>
+                <button class="btn-prof-del" onclick="deleteWorkout('${w.id}')">Delete</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+window.editWorkout = function(id) {
+    const w = appData.library.find(x => x.id === id);
+    if(w) {
+        builderState = JSON.parse(JSON.stringify(w)); // Deep copy into builder state
+        switchView('view-builder');
+    }
+}
+
+window.deleteWorkout = function(id) {
+    if(!confirm("Are you sure you want to delete this workout? It will be removed from your schedule.")) return;
+    // Remove from Library
+    appData.library = appData.library.filter(w => w.id !== id);
+    // Remove from Schedule
+    for(let date in appData.schedule) {
+        appData.schedule[date] = appData.schedule[date].filter(item => item.id !== id);
+        if(appData.schedule[date].length === 0) delete appData.schedule[date];
+    }
+    saveData();
+    renderProfile();
+}
+
 
 // --- PREVIEW SCREEN ---
 function openPreview(instanceId, workoutId) {
@@ -220,7 +258,13 @@ function openPreview(instanceId, workoutId) {
         let exHtml = '';
         set.exercises.forEach(ex => {
             const badgeContent = ex.type === 'timed' ? clockIcon : ex.val;
-            exHtml += `<div class="ex-badge-row"><div><div class="ex-badge">${badgeContent}</div><span>${ex.name}</span></div></div>`;
+            let label = ex.type === 'timed' ? (ex.val > 60 ? 'min:sec' : 'sec') : ex.label;
+            
+            let displayVal = ex.type === 'timed' ? 
+                             `${Math.floor(ex.val/60)}:${String(ex.val%60).padStart(2,'0')}` 
+                             : ex.val;
+
+            exHtml += `<div class="ex-badge-row"><div><div class="ex-badge">${badgeContent}</div><span>${ex.name}</span></div><span style="font-size:1rem; opacity:0.8">${displayVal}</span></div>`;
         });
         card.innerHTML = `<div class="set-card-header"><span>Set ${idx + 1}</span><span>x${set.repeat}</span></div>${exHtml}`;
         container.appendChild(card);
@@ -237,18 +281,14 @@ window.startWorkout = function(previewInstance) {
     const template = appData.library.find(w => w.id === previewInstance.workoutId);
     if(!template) return;
 
-    activeSession = { 
-        name: template.name, 
-        instanceId: previewInstance.instanceId,
-        sets: [] 
-    };
+    activeSession = { name: template.name, instanceId: previewInstance.instanceId, sets: [] };
 
     template.sets.forEach((set, sIdx) => {
         for(let r=0; r<set.repeat; r++) {
             const uniqueExercises = set.exercises.map((ex, eIdx) => ({
                 ...ex,
                 uid: `ex_${sIdx}_${r}_${eIdx}`,
-                timeLeft: ex.type === 'timed' ? (ex.label === 'min' ? ex.val * 60 : ex.val) : null,
+                timeLeft: ex.val, // Val is already normalized to seconds
                 isFinished: false
             }));
 
@@ -275,7 +315,7 @@ function renderActiveWorkout() {
         if (set.isDone) completedSetsCount++;
         
         const card = document.createElement('div');
-        card.className = `themed-set-card`; // Stacked cleanly without fading
+        card.className = `themed-set-card`; 
         
         let exHtml = '';
         set.exercises.forEach(ex => {
@@ -295,18 +335,13 @@ function renderActiveWorkout() {
 
             exHtml += `
                 <div class="ex-badge-row">
-                    <div>
-                        <div class="ex-badge">${badgeContent}</div>
-                        <span>${ex.name}</span>
-                    </div>
+                    <div><div class="ex-badge">${badgeContent}</div><span>${ex.name}</span></div>
                     ${timerBtn}
                 </div>
             `;
         });
 
-        // Set Completion Button (White to Green)
         let completeBtn = `<button class="btn-complete-set ${set.isDone ? 'completed' : ''}" onclick="toggleSetComplete('${set.id}')">${set.isDone ? 'Completed' : 'Complete'}</button>`;
-
         card.innerHTML = `<div class="set-card-header"><span>${set.title}</span></div>${exHtml}${completeBtn}`;
         container.appendChild(card);
     });
@@ -345,11 +380,8 @@ window.toggleSetComplete = function(setId) {
     set.isDone = true; 
     renderActiveWorkout();
     
-    // Check if ALL sets are done to auto-finish
-    const allSetsDone = activeSession.sets.every(s => s.isDone);
-    if(allSetsDone) {
+    if(activeSession.sets.every(s => s.isDone)) {
         setTimeout(() => {
-            // Find this specific scheduled workout instance and mark it completed
             const daySchedule = appData.schedule[selectedDateStr];
             if (daySchedule) {
                 const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
@@ -361,7 +393,7 @@ window.toggleSetComplete = function(setId) {
             Object.values(activeTimers).forEach(clearInterval);
             activeTimers = {};
             switchView('view-calendar');
-        }, 500); // 0.5s delay so user sees the final button turn Green
+        }, 500); 
     }
 };
 
@@ -370,15 +402,13 @@ document.getElementById('btn-cancel-workout').addEventListener('click', () => {
     activeTimers = {};
     switchView('view-calendar');
 });
-
 document.getElementById('btn-finish-workout').addEventListener('click', () => {
-    // Manual finish
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
     const daySchedule = appData.schedule[selectedDateStr];
     if (daySchedule) {
-        const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
-        if (scheduledItem) scheduledItem.completed = true;
+        const item = daySchedule.find(i => i.instanceId === activeSession.instanceId);
+        if (item) item.completed = true;
         saveData();
     }
     switchView('view-calendar');
@@ -388,17 +418,26 @@ document.getElementById('btn-finish-workout').addEventListener('click', () => {
 document.getElementById('add-set-btn').addEventListener('click', () => { builderState.sets.push({ repeat: 1, exercises: [] }); renderBuilder(); });
 
 document.getElementById('save-to-library-btn').addEventListener('click', () => {
+    // If Editing existing workout, remove old version
+    if(builderState.id) {
+        appData.library = appData.library.filter(w => w.id !== builderState.id);
+    }
+
     appData.library.push({
-        id: 'wk_' + Date.now(),
+        id: builderState.id || 'wk_' + Date.now(),
         name: document.getElementById('workout-name').value || "My Workout",
         time: document.getElementById('time-select').value,
-        theme: document.body.getAttribute('data-theme'),
+        theme: builderState.theme,
         sets: JSON.parse(JSON.stringify(builderState.sets)) 
     });
     saveData();
-    builderState = { name: "", time: "1.5 - 2 hours", sets: [] };
+    
+    // Reset state
+    builderState = { id: null, name: "", time: "1.5 - 2 hours", theme: "purple", sets: [] };
     document.getElementById('workout-name').value = "";
-    switchView('view-calendar');
+    
+    // Switch to Profile to see the saved workout
+    switchView('view-profile');
 });
 
 window.changeSetRepeat = function(setIdx, delta) {
@@ -409,9 +448,25 @@ window.changeSetRepeat = function(setIdx, delta) {
 function renderBuilder() {
     const container = document.getElementById('sets-container');
     container.innerHTML = '';
+    
+    // Bind top level fields
+    document.getElementById('workout-name').value = builderState.name;
+    document.getElementById('time-select').value = builderState.time;
+
+    // Set Theme dot
+    document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+    const dot = document.querySelector(`.theme-dot.${builderState.theme}`);
+    if(dot) dot.classList.add('active');
+
     builderState.sets.forEach((set, idx) => {
         const card = document.createElement('div');
         card.className = 'set-card';
+        
+        let exRows = set.exercises.map(ex => {
+            let label = ex.type === 'timed' ? 'sec' : ex.label;
+            return `<div class="exercise-row"><span>${ex.name}</span><span>${ex.val} ${label}</span></div>`;
+        }).join('');
+
         card.innerHTML = `
             <div class="set-header">
                 <span>Set ${idx + 1}</span>
@@ -421,51 +476,61 @@ function renderBuilder() {
                     <button onclick="changeSetRepeat(${idx}, 1)">+</button>
                 </div>
             </div>
-            ${set.exercises.map(ex => `<div class="exercise-row"><span>${ex.name}</span><span>${ex.val} ${ex.label}</span></div>`).join('')}
+            ${exRows}
             <button class="btn-add-ex full-width" onclick="openModal(${idx})">+ New Exercise</button>
         `;
         container.appendChild(card);
     });
 }
 
-// Modal Logic w/ Defaults
-let targetSet = null, mMode = 'reps', mVal = 10, timeUnit = 'sec';
+// Modal Logic (Direct Text Input Version)
+let targetSet = null, mMode = 'reps';
 window.openModal = function(idx) { 
     targetSet = idx; 
     document.getElementById('modal-overlay').classList.remove('hidden'); 
     document.getElementById('modal-name').value = '';
-    mMode = 'reps'; mVal = 10;
+    
+    // Default to REPS
+    mMode = 'reps';
     document.getElementById('toggle-reps').classList.add('active');
     document.getElementById('toggle-timed').classList.remove('active');
-    document.getElementById('time-unit-container').classList.add('hidden');
-    document.getElementById('counter-value').innerText = mVal;
+    document.getElementById('input-reps-container').classList.remove('hidden');
+    document.getElementById('input-time-container').classList.add('hidden');
+    
+    document.getElementById('modal-val-reps').value = 10;
 }
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
 
 document.getElementById('toggle-reps').onclick = (e) => { 
-    mMode='reps'; mVal = 10; 
+    mMode='reps'; 
     e.target.classList.add('active'); document.getElementById('toggle-timed').classList.remove('active'); 
-    document.getElementById('time-unit-container').classList.add('hidden');
-    document.getElementById('counter-value').innerText = mVal;
+    document.getElementById('input-reps-container').classList.remove('hidden');
+    document.getElementById('input-time-container').classList.add('hidden');
 }
 document.getElementById('toggle-timed').onclick = (e) => { 
-    mMode='timed'; mVal = 30; timeUnit = 'sec'; 
+    mMode='timed'; 
     e.target.classList.add('active'); document.getElementById('toggle-reps').classList.remove('active'); 
-    document.getElementById('time-unit-container').classList.remove('hidden');
-    document.getElementById('unit-sec').classList.add('active'); document.getElementById('unit-min').classList.remove('active');
-    document.getElementById('counter-value').innerText = mVal;
+    document.getElementById('input-reps-container').classList.add('hidden');
+    document.getElementById('input-time-container').classList.remove('hidden');
 }
-document.getElementById('unit-sec').onclick = (e) => { timeUnit='sec'; e.target.classList.add('active'); document.getElementById('unit-min').classList.remove('active');}
-document.getElementById('unit-min').onclick = (e) => { timeUnit='min'; e.target.classList.add('active'); document.getElementById('unit-sec').classList.remove('active');}
-
-document.getElementById('counter-plus').onclick = () => { mVal += (mMode==='reps'||timeUnit==='min')?1:5; document.getElementById('counter-value').innerText = mVal; };
-document.getElementById('counter-minus').onclick = () => { if(mVal>0) mVal -= (mMode==='reps'||timeUnit==='min')?1:5; document.getElementById('counter-value').innerText = mVal; };
 
 document.getElementById('modal-save').onclick = () => {
+    let finalVal = 0;
+    if(mMode === 'reps') {
+        finalVal = parseInt(document.getElementById('modal-val-reps').value) || 0;
+    } else {
+        const mins = parseInt(document.getElementById('modal-val-min').value) || 0;
+        const secs = parseInt(document.getElementById('modal-val-sec').value) || 0;
+        finalVal = (mins * 60) + secs; // Convert everything to total seconds for the engine
+    }
+
     builderState.sets[targetSet].exercises.push({
         name: document.getElementById('modal-name').value || 'Exercise',
-        type: mMode, val: mVal, label: mMode === 'timed' ? timeUnit : 'ct'
+        type: mMode, 
+        val: finalVal, 
+        label: mMode === 'timed' ? 'sec' : 'ct'
     });
+    
     document.getElementById('modal-overlay').classList.add('hidden');
     renderBuilder();
 }
