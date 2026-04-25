@@ -23,12 +23,15 @@
             <div class="calendar-container">
                 <div class="calendar-header">
                     <button id="prev-month">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     </button>
-                    <h2 id="month-display">April</h2>
+                    <h2 id="month-display">April 2026</h2>
                     <button id="next-month">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                     </button>
+                </div>
+                <div class="calendar-grid-header">
+                    <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
@@ -51,9 +54,7 @@
                     <div class="time-bubble" id="preview-time">1.5 - 2</div>
                     <span class="time-label">hours</span>
                 </div>
-
-                <div id="preview-sets-container">
-                    </div>
+                <div id="preview-sets-container"></div>
             </div>
         </section>
 
@@ -87,6 +88,14 @@
             <button id="save-to-library-btn" class="btn-save-green full-width">Save to Library</button>
         </section>
 
+        <section id="view-profile" class="view hidden">
+            <header class="schedule-header">
+                <h1 style="color: black;">My Workouts</h1>
+            </header>
+            <div id="profile-library-list">
+                </div>
+        </section>
+
         <section id="view-active" class="view hidden">
             <header class="active-header">
                 <h2 id="active-workout-title" class="theme-text-color">Workout</h2>
@@ -94,8 +103,7 @@
             </header>
             
             <div class="active-scroll-area">
-                <div id="active-sets-container">
-                    </div>
+                <div id="active-sets-container"></div>
             </div>
             
             <div class="execution-footer">
@@ -114,7 +122,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             </button>
             <button class="nav-btn" data-target="view-profile">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
             </button>
         </nav>
     </div>
@@ -129,21 +137,31 @@
 
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3 style="color: black; margin-top: 0;">Name Exercise</h3>
+            <h3 style="color: black; margin-top: 0;">Exercise Name</h3>
             <input type="text" id="modal-name" placeholder="Pushups">
+            
             <div class="modal-toggles">
                 <button id="toggle-reps" class="active">REPS</button>
                 <button id="toggle-timed">TIMED</button>
             </div>
-            <div id="time-unit-container" class="hidden">
-                <button id="unit-sec" class="unit-btn active">Seconds</button>
-                <button id="unit-min" class="unit-btn">Minutes</button>
+            
+            <div id="input-reps-container" class="input-container">
+                <input type="number" id="modal-val-reps" class="mega-input" value="10" min="1">
+                <span style="color: black; font-weight: bold; margin-left: 10px;">reps</span>
             </div>
-            <div class="modal-counter">
-                <button id="counter-minus">-</button>
-                <span id="counter-value">10</span>
-                <button id="counter-plus">+</button>
+
+            <div id="input-time-container" class="input-container hidden">
+                <div class="time-col">
+                    <input type="number" id="modal-val-min" class="mega-input" value="00" min="0">
+                    <small style="color: black;">min</small>
+                </div>
+                <span class="mega-colon">:</span>
+                <div class="time-col">
+                    <input type="number" id="modal-val-sec" class="mega-input" value="30" min="0" max="59">
+                    <small style="color: black;">sec</small>
+                </div>
             </div>
+
             <div class="flex-row">
                 <button id="modal-save" class="btn-save-green flex-3">SAVE</button>
                 <button id="modal-close" class="btn-delete-red flex-1">X</button>
