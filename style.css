@@ -199,5 +199,24 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .hidden { display: none !important; }
 .flex-row { display: flex; gap: 10px; }
 .flex-3 { flex: 3; } .flex-1 { flex: 1; }
+
+/* High-contrast list buttons for white modals */
+.btn-modal-list {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: black !important;
+    padding: 15px;
+    border-radius: 15px;
+    width: 100%;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-modal-list:active {
+    background: rgba(0, 0, 0, 0.15);
+    transform: scale(0.98);
+}
 .full-width { width: 100%; }
 .mt-10 { margin-top: 10px; } .mt-15 { margin-top: 15px; }
