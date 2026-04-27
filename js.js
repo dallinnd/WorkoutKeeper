@@ -481,35 +481,118 @@ window.toggleExerciseTimer = function(exUid) {
     renderActiveWorkout(); 
 };
 
+// --- LIVE WORKOUT EXECUTION ENGINE ---
+// ... (startWorkout, renderActiveWorkout, and toggleExerciseTimer stay the same) ...
+
+let restInterval = null;
+let restTimeLeft = 30;
+
 window.toggleSetComplete = function(setId) {
     const set = activeSession.sets.find(s => s.id === setId);
-    set.isDone = true; 
-    renderActiveWorkout();
     
-    if(activeSession.sets.every(s => s.isDone)) {
-        setTimeout(() => {
-            const daySchedule = appData.schedule[selectedDateStr];
-            if (daySchedule) {
-                const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
-                if (scheduledItem) {
-                    scheduledItem.completed = true;
-                    saveData();
-                }
-            }
-            Object.values(activeTimers).forEach(clearInterval);
-            activeTimers = {};
-            releaseWakeLock(); // Release lock on success
-            switchView('view-calendar');
-        }, 500); 
+    // Only trigger rest if turning it ON
+    if (!set.isDone) {
+        set.isDone = true;
+        renderActiveWorkout();
+        
+        if(activeSession.sets.every(s => s.isDone)) {
+            // ALL SETS DONE -> Trigger Cooldown
+            setTimeout(() => {
+                document.getElementById('cooldown-modal').classList.remove('hidden');
+                playBeep('finish'); // Play ding!
+            }, 500); 
+        } else {
+            // NOT LAST SET -> Trigger Rest
+            setTimeout(() => {
+                startRestTimer(30); // 30 seconds default rest
+            }, 300);
+        }
+    } else {
+        set.isDone = false; // Allow un-checking without triggering rest
+        renderActiveWorkout();
     }
 };
 
+// --- REST TIMER LOGIC ---
+function startRestTimer(seconds) {
+    restTimeLeft = seconds;
+    updateRestDisplay();
+    document.getElementById('rest-modal').classList.remove('hidden');
+    
+    if(restInterval) clearInterval(restInterval);
+    restInterval = setInterval(() => {
+        restTimeLeft--;
+        updateRestDisplay();
+        
+        if(restTimeLeft <= 3 && restTimeLeft > 0) playBeep('countdown');
+
+        if(restTimeLeft <= 0) {
+            endRestTimer();
+            playBeep('finish');
+        }
+    }, 1000);
+}
+
+function updateRestDisplay() {
+    let m = Math.floor(restTimeLeft / 60);
+    let s = restTimeLeft % 60;
+    document.getElementById('rest-timer-display').innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function endRestTimer() {
+    if(restInterval) clearInterval(restInterval);
+    document.getElementById('rest-modal').classList.add('hidden');
+}
+
+document.getElementById('btn-skip-rest').addEventListener('click', endRestTimer);
+document.getElementById('btn-add-rest').addEventListener('click', () => { 
+    restTimeLeft += 15; 
+    updateRestDisplay();
+});
+
+// --- COOLDOWN FINISH LOGIC ---
+document.getElementById('btn-finish-cooldown').addEventListener('click', () => {
+    document.getElementById('cooldown-modal').classList.add('hidden');
+    
+    // Finalize Workout Data
+    const daySchedule = appData.schedule[selectedDateStr];
+    if (daySchedule) {
+        const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
+        if (scheduledItem) {
+            scheduledItem.completed = true;
+            saveData();
+        }
+    }
+    
+    Object.values(activeTimers).forEach(clearInterval);
+    activeTimers = {};
+    if (typeof releaseWakeLock === 'function') releaseWakeLock();
+    
+    switchView('view-calendar');
+});
+
+// Manual Quit (Optional Escape Hatch)
 document.getElementById('btn-cancel-workout').addEventListener('click', () => {
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
-    releaseWakeLock(); // Release lock on quit
+    if (typeof releaseWakeLock === 'function') releaseWakeLock();
     switchView('view-calendar');
 });
+
+document.getElementById('btn-finish-workout').addEventListener('click', () => {
+    Object.values(activeTimers).forEach(clearInterval);
+    activeTimers = {};
+    const daySchedule = appData.schedule[selectedDateStr];
+    if (daySchedule) {
+        const item = daySchedule.find(i => i.instanceId === activeSession.instanceId);
+        if (item) item.completed = true;
+        saveData();
+    }
+    if (typeof releaseWakeLock === 'function') releaseWakeLock();
+    switchView('view-calendar');
+});
+
+// ... (Builder engine code below stays the same) ...
 
 document.getElementById('btn-finish-workout').addEventListener('click', () => {
     Object.values(activeTimers).forEach(clearInterval);
