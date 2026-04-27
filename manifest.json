@@ -1,0 +1,21 @@
+{
+  "name": "WorkoutKeeper",
+  "short_name": "WorkoutKeeper",
+  "description": "Gamified Workout Scheduling and Tracking App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a3622",
+  "theme_color": "#1a3622",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
