@@ -208,7 +208,7 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
         appData.library.forEach(w => {
             const btn = document.createElement('button');
             btn.className = 'btn-ghost';
-            btn.style.color = 'black'; btn.style.borderColor = 'rgba(0,0,0,0.2)';
+            btn.style.color = 'black'; btn.style.borderColor = 'black';
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
@@ -471,6 +471,19 @@ window.changeSetRepeat = function(setIdx, delta) {
     renderBuilder();
 };
 
+// --- NEW DELETION FUNCTIONS ---
+window.removeSet = function(setIdx) {
+    if(confirm("Remove this set?")) {
+        builderState.sets.splice(setIdx, 1);
+        renderBuilder();
+    }
+};
+
+window.removeExercise = function(setIdx, exIdx) {
+    builderState.sets[setIdx].exercises.splice(exIdx, 1);
+    renderBuilder();
+};
+
 function renderBuilder() {
     const container = document.getElementById('sets-container');
     container.innerHTML = '';
@@ -486,16 +499,27 @@ function renderBuilder() {
         const card = document.createElement('div');
         card.className = 'set-card';
         
-        let exRows = set.exercises.map(ex => {
+        let exRows = set.exercises.map((ex, exIdx) => {
             let displayVal = ex.val;
             if(ex.type === 'timed') displayVal = `${Math.floor(ex.val/60)}:${String(ex.val%60).padStart(2,'0')}`;
             let label = ex.type === 'timed' ? '' : ex.label;
-            return `<div class="exercise-row"><span>${ex.name}</span><span>${displayVal} ${label}</span></div>`;
+            
+            return `
+            <div class="exercise-row">
+                <span>${ex.name}</span>
+                <div style="display:flex; align-items:center;">
+                    <span>${displayVal} ${label}</span>
+                    <button class="btn-remove-ex" onclick="removeExercise(${idx}, ${exIdx})">✕</button>
+                </div>
+            </div>`;
         }).join('');
 
         card.innerHTML = `
             <div class="set-header">
-                <span>Set ${idx + 1}</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span>Set ${idx + 1}</span>
+                    <button class="btn-remove-set" onclick="removeSet(${idx})">✕</button>
+                </div>
                 <div class="set-counter">
                     <button onclick="changeSetRepeat(${idx}, -1)">-</button>
                     <span>x${set.repeat}</span>
@@ -540,7 +564,6 @@ document.getElementById('toggle-timed').onclick = (e) => {
     document.getElementById('input-time-container').classList.remove('hidden');
 }
 
-// Enforce max bounds on input fields dynamically
 document.getElementById('modal-val-sec').addEventListener('input', function() {
     if(parseInt(this.value) > 59) this.value = 59;
 });
