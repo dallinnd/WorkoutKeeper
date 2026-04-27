@@ -22,7 +22,6 @@ const checkIcon = `<span style="color:#2ecc71; font-weight:bold; margin-right:10
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playBeep(type) {
-    // Browsers require audio context to be resumed after a user gesture
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
     const oscillator = audioCtx.createOscillator();
@@ -33,14 +32,14 @@ function playBeep(type) {
     
     if (type === 'countdown') {
         oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // Standard Beep
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
         oscillator.start(audioCtx.currentTime);
         oscillator.stop(audioCtx.currentTime + 0.1);
     } else if (type === 'finish') {
         oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher Ding!
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
         oscillator.start(audioCtx.currentTime);
@@ -55,33 +54,27 @@ async function requestWakeLock() {
     try {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
-            console.log('Wake Lock acquired');
         }
-    } catch (err) {
-        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
-    }
+    } catch (err) {}
 }
 
 function releaseWakeLock() {
     if (wakeLock !== null) {
         wakeLock.release();
         wakeLock = null;
-        console.log('Wake Lock released');
     }
 }
 
-// Re-acquire wake lock if user tabs out and comes back
 document.addEventListener('visibilitychange', async () => {
     if (wakeLock !== null && document.visibilityState === 'visible' && activeSession !== null) {
         await requestWakeLock();
     }
 });
 
-
 // --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_v10');
+        const saved = localStorage.getItem('wk_data_vfinal');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
@@ -90,7 +83,7 @@ window.addEventListener('DOMContentLoaded', () => {
             id: 'wk_' + Date.now(), name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
             sets: [{ repeat: 2, exercises: [
                 {name: 'Pushups', type: 'reps', val: 20, label: 'ct'},
-                {name: 'Planks', type: 'timed', val: 10, label: 'sec'} // 10 sec to easily test audio
+                {name: 'Planks', type: 'timed', val: 10, label: 'sec'}
             ]}]
         });
         appData.schedule[selectedDateStr] = [{ id: appData.library[0].id, instanceId: Date.now(), completed: false }];
@@ -103,7 +96,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showDailySchedule(selectedDateStr);
 });
 
-function saveData() { localStorage.setItem('wk_data_v10', JSON.stringify(appData)); }
+function saveData() { localStorage.setItem('wk_data_vfinal', JSON.stringify(appData)); }
 
 // --- ROUTER & THEMES ---
 function switchView(targetId) {
@@ -269,7 +262,6 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
         appData.library.forEach(w => {
             const btn = document.createElement('button');
             btn.className = 'btn-ghost';
-            btn.style.color = 'black'; btn.style.borderColor = 'rgba(0,0,0,0.2)';
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
@@ -370,9 +362,8 @@ document.getElementById('btn-start-workout').addEventListener('click', () => sta
 
 // --- ACTIVE WORKOUT ENGINE ---
 window.startWorkout = function(previewInstance) {
-    // Wake Lock Request!
     requestWakeLock();
-
+    
     const template = appData.library.find(w => w.id === previewInstance.workoutId);
     if(!template) return;
 
@@ -446,9 +437,8 @@ function renderActiveWorkout() {
 }
 
 window.toggleExerciseTimer = function(exUid) {
-    // Ensure audio API is unlocked when they click a timer
     if (audioCtx.state === 'suspended') audioCtx.resume();
-
+    
     let foundEx = null;
     for (let s of activeSession.sets) {
         foundEx = s.exercises.find(e => e.uid === exUid);
@@ -463,12 +453,8 @@ window.toggleExerciseTimer = function(exUid) {
         activeTimers[exUid] = setInterval(() => {
             foundEx.timeLeft--;
             
-            // AUDIO CUE LOGIC
-            if (foundEx.timeLeft > 0 && foundEx.timeLeft <= 3) {
-                playBeep('countdown');
-            } else if (foundEx.timeLeft === 0) {
-                playBeep('finish');
-            }
+            if (foundEx.timeLeft > 0 && foundEx.timeLeft <= 3) playBeep('countdown');
+            else if (foundEx.timeLeft === 0) playBeep('finish');
 
             if(foundEx.timeLeft <= 0) {
                 clearInterval(activeTimers[exUid]);
@@ -481,39 +467,33 @@ window.toggleExerciseTimer = function(exUid) {
     renderActiveWorkout(); 
 };
 
-// --- LIVE WORKOUT EXECUTION ENGINE ---
-// ... (startWorkout, renderActiveWorkout, and toggleExerciseTimer stay the same) ...
-
+// --- REST & COOLDOWN LOGIC ---
 let restInterval = null;
 let restTimeLeft = 30;
 
 window.toggleSetComplete = function(setId) {
     const set = activeSession.sets.find(s => s.id === setId);
     
-    // Only trigger rest if turning it ON
     if (!set.isDone) {
         set.isDone = true;
         renderActiveWorkout();
         
         if(activeSession.sets.every(s => s.isDone)) {
-            // ALL SETS DONE -> Trigger Cooldown
             setTimeout(() => {
                 document.getElementById('cooldown-modal').classList.remove('hidden');
-                playBeep('finish'); // Play ding!
+                playBeep('finish');
             }, 500); 
         } else {
-            // NOT LAST SET -> Trigger Rest
             setTimeout(() => {
-                startRestTimer(30); // 30 seconds default rest
+                startRestTimer(30); 
             }, 300);
         }
     } else {
-        set.isDone = false; // Allow un-checking without triggering rest
+        set.isDone = false; 
         renderActiveWorkout();
     }
 };
 
-// --- REST TIMER LOGIC ---
 function startRestTimer(seconds) {
     restTimeLeft = seconds;
     updateRestDisplay();
@@ -525,7 +505,6 @@ function startRestTimer(seconds) {
         updateRestDisplay();
         
         if(restTimeLeft <= 3 && restTimeLeft > 0) playBeep('countdown');
-
         if(restTimeLeft <= 0) {
             endRestTimer();
             playBeep('finish');
@@ -550,11 +529,8 @@ document.getElementById('btn-add-rest').addEventListener('click', () => {
     updateRestDisplay();
 });
 
-// --- COOLDOWN FINISH LOGIC ---
 document.getElementById('btn-finish-cooldown').addEventListener('click', () => {
     document.getElementById('cooldown-modal').classList.add('hidden');
-    
-    // Finalize Workout Data
     const daySchedule = appData.schedule[selectedDateStr];
     if (daySchedule) {
         const scheduledItem = daySchedule.find(i => i.instanceId === activeSession.instanceId);
@@ -563,15 +539,12 @@ document.getElementById('btn-finish-cooldown').addEventListener('click', () => {
             saveData();
         }
     }
-    
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
     if (typeof releaseWakeLock === 'function') releaseWakeLock();
-    
     switchView('view-calendar');
 });
 
-// Manual Quit (Optional Escape Hatch)
 document.getElementById('btn-cancel-workout').addEventListener('click', () => {
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
@@ -589,21 +562,6 @@ document.getElementById('btn-finish-workout').addEventListener('click', () => {
         saveData();
     }
     if (typeof releaseWakeLock === 'function') releaseWakeLock();
-    switchView('view-calendar');
-});
-
-// ... (Builder engine code below stays the same) ...
-
-document.getElementById('btn-finish-workout').addEventListener('click', () => {
-    Object.values(activeTimers).forEach(clearInterval);
-    activeTimers = {};
-    const daySchedule = appData.schedule[selectedDateStr];
-    if (daySchedule) {
-        const item = daySchedule.find(i => i.instanceId === activeSession.instanceId);
-        if (item) item.completed = true;
-        saveData();
-    }
-    releaseWakeLock(); // Release lock on manual finish
     switchView('view-calendar');
 });
 
@@ -694,7 +652,7 @@ function renderBuilder() {
     });
 }
 
-// Modal Logic
+// --- MODAL LOGIC ---
 let targetSet = null, mMode = 'reps';
 
 window.openModal = function(idx) { 
