@@ -194,7 +194,26 @@
             </div>
         </div>
     </div>
+    
+    <div id="rest-modal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <h3 style="color: black; margin-top:0;">Rest & Recover</h3>
+            <div id="rest-timer-display" style="font-size: 5rem; font-weight: bold; color: black; margin: 20px 0;">00:30</div>
+            <div class="flex-row">
+                <button id="btn-skip-rest" class="btn-delete-red flex-1" style="color:white; font-size: 1rem;">Skip</button>
+                <button id="btn-add-rest" class="btn-save-green flex-1" style="color:white; font-size: 1rem;">+15s</button>
+            </div>
+        </div>
+    </div>
 
+    <div id="cooldown-modal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <h2 style="color: black; font-size: 2rem;">🎉 Complete!</h2>
+            <p style="color: #555; margin: 20px 0; font-size: 1.2rem; font-weight: bold;">Great job! Take 5-10 minutes to stretch and cool down.</p>
+            <button id="btn-finish-cooldown" class="btn-save-green full-width">Done</button>
+        </div>
+    </div>
+    
     <script src="js.js"></script>
 </body>
 </html>
