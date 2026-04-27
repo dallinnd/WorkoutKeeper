@@ -18,9 +18,70 @@ let activeTimers = {};
 const clockIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
 const checkIcon = `<span style="color:#2ecc71; font-weight:bold; margin-right:10px;">✓</span>`;
 
+// --- AUDIO CUES (Web Audio API) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playBeep(type) {
+    // Browsers require audio context to be resumed after a user gesture
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    if (type === 'countdown') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // Standard Beep
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } else if (type === 'finish') {
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher Ding!
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.6);
+    }
+}
+
+// --- WAKE LOCK API ---
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock acquired');
+        }
+    } catch (err) {
+        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release();
+        wakeLock = null;
+        console.log('Wake Lock released');
+    }
+}
+
+// Re-acquire wake lock if user tabs out and comes back
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible' && activeSession !== null) {
+        await requestWakeLock();
+    }
+});
+
+
+// --- INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_v9');
+        const saved = localStorage.getItem('wk_data_v10');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
@@ -29,7 +90,7 @@ window.addEventListener('DOMContentLoaded', () => {
             id: 'wk_' + Date.now(), name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
             sets: [{ repeat: 2, exercises: [
                 {name: 'Pushups', type: 'reps', val: 20, label: 'ct'},
-                {name: 'Planks', type: 'timed', val: 60, label: 'sec'}
+                {name: 'Planks', type: 'timed', val: 10, label: 'sec'} // 10 sec to easily test audio
             ]}]
         });
         appData.schedule[selectedDateStr] = [{ id: appData.library[0].id, instanceId: Date.now(), completed: false }];
@@ -42,7 +103,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showDailySchedule(selectedDateStr);
 });
 
-function saveData() { localStorage.setItem('wk_data_v9', JSON.stringify(appData)); }
+function saveData() { localStorage.setItem('wk_data_v10', JSON.stringify(appData)); }
 
 // --- ROUTER & THEMES ---
 function switchView(targetId) {
@@ -208,7 +269,7 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
         appData.library.forEach(w => {
             const btn = document.createElement('button');
             btn.className = 'btn-ghost';
-            btn.style.color = 'black'; btn.style.borderColor = 'black';
+            btn.style.color = 'black'; btn.style.borderColor = 'rgba(0,0,0,0.2)';
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
@@ -309,6 +370,9 @@ document.getElementById('btn-start-workout').addEventListener('click', () => sta
 
 // --- ACTIVE WORKOUT ENGINE ---
 window.startWorkout = function(previewInstance) {
+    // Wake Lock Request!
+    requestWakeLock();
+
     const template = appData.library.find(w => w.id === previewInstance.workoutId);
     if(!template) return;
 
@@ -382,6 +446,9 @@ function renderActiveWorkout() {
 }
 
 window.toggleExerciseTimer = function(exUid) {
+    // Ensure audio API is unlocked when they click a timer
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
     let foundEx = null;
     for (let s of activeSession.sets) {
         foundEx = s.exercises.find(e => e.uid === exUid);
@@ -395,6 +462,14 @@ window.toggleExerciseTimer = function(exUid) {
     } else {
         activeTimers[exUid] = setInterval(() => {
             foundEx.timeLeft--;
+            
+            // AUDIO CUE LOGIC
+            if (foundEx.timeLeft > 0 && foundEx.timeLeft <= 3) {
+                playBeep('countdown');
+            } else if (foundEx.timeLeft === 0) {
+                playBeep('finish');
+            }
+
             if(foundEx.timeLeft <= 0) {
                 clearInterval(activeTimers[exUid]);
                 delete activeTimers[exUid];
@@ -423,6 +498,7 @@ window.toggleSetComplete = function(setId) {
             }
             Object.values(activeTimers).forEach(clearInterval);
             activeTimers = {};
+            releaseWakeLock(); // Release lock on success
             switchView('view-calendar');
         }, 500); 
     }
@@ -431,8 +507,10 @@ window.toggleSetComplete = function(setId) {
 document.getElementById('btn-cancel-workout').addEventListener('click', () => {
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
+    releaseWakeLock(); // Release lock on quit
     switchView('view-calendar');
 });
+
 document.getElementById('btn-finish-workout').addEventListener('click', () => {
     Object.values(activeTimers).forEach(clearInterval);
     activeTimers = {};
@@ -442,6 +520,7 @@ document.getElementById('btn-finish-workout').addEventListener('click', () => {
         if (item) item.completed = true;
         saveData();
     }
+    releaseWakeLock(); // Release lock on manual finish
     switchView('view-calendar');
 });
 
@@ -471,7 +550,6 @@ window.changeSetRepeat = function(setIdx, delta) {
     renderBuilder();
 };
 
-// --- NEW DELETION FUNCTIONS ---
 window.removeSet = function(setIdx) {
     if(confirm("Remove this set?")) {
         builderState.sets.splice(setIdx, 1);
@@ -533,7 +611,7 @@ function renderBuilder() {
     });
 }
 
-// Modal Logic (Direct Text Input)
+// Modal Logic
 let targetSet = null, mMode = 'reps';
 
 window.openModal = function(idx) { 
