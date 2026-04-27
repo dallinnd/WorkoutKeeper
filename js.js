@@ -254,14 +254,17 @@ function showDailySchedule(dateStr) {
     document.getElementById('btn-schedule-new').classList.remove('hidden');
 }
 
+// THIS IS THE FIXED SCHEDULE MODAL LIST LOGIC
 document.getElementById('btn-schedule-new').addEventListener('click', () => {
     const list = document.getElementById('library-list');
     list.innerHTML = '';
-    if(appData.library.length === 0) list.innerHTML = '<p style="color:black;">No saved workouts.</p>';
-    else {
+    if(appData.library.length === 0) {
+        list.innerHTML = '<p style="color:black;">No saved workouts.</p>';
+    } else {
         appData.library.forEach(w => {
             const btn = document.createElement('button');
-            btn.className = 'btn-ghost';
+            // Using the new high-contrast class here!
+            btn.className = 'btn-modal-list';
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
