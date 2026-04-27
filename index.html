@@ -20,7 +20,7 @@
                 <button id="btn-schedule-new" class="btn-ghost hidden">+ Schedule Workout</button>
             </div>
 
-            <div class="calendar-container">
+            <div class="calendar-container glass-panel-dark">
                 <div class="calendar-header">
                     <button id="prev-month">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -45,7 +45,7 @@
                 <button id="btn-start-workout" class="btn-start-pill">Start</button>
             </div>
             
-            <div class="preview-card">
+            <div class="preview-card glass-panel-light">
                 <p class="section-label">Overview</p>
                 <h2 id="preview-title" class="theme-text-color">Workout Name</h2>
                 
@@ -90,10 +90,20 @@
 
         <section id="view-profile" class="view hidden">
             <header class="schedule-header">
-                <h1 style="color: black;">My Workouts</h1>
+                <h1 style="color: #111;">My Workouts</h1>
             </header>
-            <div id="profile-library-list">
-                </div>
+            
+            <div id="profile-library-list"></div>
+
+            <div class="data-fab-container">
+                <button id="btn-export-data" class="btn-fab" title="Download Backup">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+                <button id="btn-import-data" class="btn-fab" title="Upload Backup">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </button>
+            </div>
+            <input type="file" id="file-import" accept=".json" class="hidden">
         </section>
 
         <section id="view-active" class="view hidden">
@@ -129,7 +139,7 @@
 
     <div id="schedule-modal" class="modal-overlay hidden">
         <div class="modal-content text-center">
-            <h3 style="color: black; margin-top:0;">Select Workout</h3>
+            <h3 style="color: black; margin-top:0; margin-bottom: 20px;">Select Workout</h3>
             <div id="library-list"></div>
             <button id="close-schedule-modal" class="btn-delete-red full-width mt-10">Cancel</button>
         </div>
@@ -137,8 +147,7 @@
 
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
-            <h3 style="color: black; margin-top: 0;">Exercise Name</h3>
-            <input type="text" id="modal-name" placeholder="Pushups">
+            <input type="text" id="modal-name" placeholder="Exercise Name">
             
             <div class="modal-toggles">
                 <button id="toggle-reps" class="active">REPS</button>
@@ -147,24 +156,26 @@
             
             <div id="input-reps-container" class="input-container">
                 <input type="number" id="modal-val-reps" class="mega-input" value="10" min="1">
-                <span style="color: black; font-weight: bold; margin-left: 10px;">reps</span>
+                <span style="color: black; font-weight: bold; margin-left: 10px; font-size: 1.2rem;">reps</span>
             </div>
 
             <div id="input-time-container" class="input-container hidden">
                 <div class="time-col">
                     <input type="number" id="modal-val-min" class="mega-input" value="00" min="0">
-                    <small style="color: black;">min</small>
+                    <small style="color: #666; font-weight:bold; margin-top: 5px;">min</small>
                 </div>
                 <span class="mega-colon">:</span>
                 <div class="time-col">
                     <input type="number" id="modal-val-sec" class="mega-input" value="30" min="0" max="59">
-                    <small style="color: black;">sec</small>
+                    <small style="color: #666; font-weight:bold; margin-top: 5px;">sec</small>
                 </div>
             </div>
 
             <div class="flex-row">
                 <button id="modal-save" class="btn-save-green flex-3">SAVE</button>
-                <button id="modal-close" class="btn-delete-red flex-1">X</button>
+                <button id="modal-close" class="btn-delete-red flex-1">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
         </div>
     </div>
