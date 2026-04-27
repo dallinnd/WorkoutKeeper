@@ -11,7 +11,6 @@ let currentDate = new Date();
 let selectedDateStr = getLocalYYYYMMDD(currentDate); 
 let builderState = { id: null, name: "", time: "1.5 - 2 hours", theme: "purple", sets: [] };
 
-// Execution Engine State
 let activePreviewInstance = null; 
 let activeSession = null;
 let activeTimers = {};
@@ -21,7 +20,7 @@ const checkIcon = `<span style="color:#2ecc71; font-weight:bold; margin-right:10
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const saved = localStorage.getItem('wk_data_v7');
+        const saved = localStorage.getItem('wk_data_v9');
         if (saved) appData = JSON.parse(saved);
     } catch(e) {}
     
@@ -30,7 +29,7 @@ window.addEventListener('DOMContentLoaded', () => {
             id: 'wk_' + Date.now(), name: 'Workouts #1', time: '1.5 - 2 hours', theme: 'purple',
             sets: [{ repeat: 2, exercises: [
                 {name: 'Pushups', type: 'reps', val: 20, label: 'ct'},
-                {name: 'Planks', type: 'timed', val: 10, label: 'sec'}
+                {name: 'Planks', type: 'timed', val: 60, label: 'sec'}
             ]}]
         });
         appData.schedule[selectedDateStr] = [{ id: appData.library[0].id, instanceId: Date.now(), completed: false }];
@@ -43,7 +42,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showDailySchedule(selectedDateStr);
 });
 
-function saveData() { localStorage.setItem('wk_data_v7', JSON.stringify(appData)); }
+function saveData() { localStorage.setItem('wk_data_v9', JSON.stringify(appData)); }
 
 // --- ROUTER & THEMES ---
 function switchView(targetId) {
@@ -91,6 +90,43 @@ function setupThemeSelector() {
         });
     });
 }
+
+// --- DATA EXPORT / IMPORT ---
+document.getElementById('btn-export-data').addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+    const dlNode = document.createElement('a');
+    dlNode.setAttribute("href", dataStr);
+    dlNode.setAttribute("download", "workout_keeper_backup.json");
+    document.body.appendChild(dlNode);
+    dlNode.click();
+    dlNode.remove();
+});
+
+document.getElementById('btn-import-data').addEventListener('click', () => {
+    document.getElementById('file-import').click();
+});
+
+document.getElementById('file-import').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const importedData = JSON.parse(event.target.result);
+            if(importedData.library && importedData.schedule) {
+                appData = importedData;
+                saveData();
+                renderProfile();
+                alert("Workout data imported successfully!");
+            } else {
+                alert("Invalid backup file structure.");
+            }
+        } catch(err) {
+            alert("Error parsing JSON file.");
+        }
+    };
+    reader.readAsText(file);
+});
 
 // --- CALENDAR LOGIC ---
 function renderCalendar() {
@@ -164,7 +200,6 @@ function showDailySchedule(dateStr) {
     document.getElementById('btn-schedule-new').classList.remove('hidden');
 }
 
-// Scheduling Modal
 document.getElementById('btn-schedule-new').addEventListener('click', () => {
     const list = document.getElementById('library-list');
     list.innerHTML = '';
@@ -173,7 +208,7 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
         appData.library.forEach(w => {
             const btn = document.createElement('button');
             btn.className = 'btn-ghost';
-            btn.style.color = 'black'; btn.style.borderColor = 'black';
+            btn.style.color = 'black'; btn.style.borderColor = 'rgba(0,0,0,0.2)';
             btn.innerText = w.name;
             btn.onclick = () => {
                 if(!appData.schedule[selectedDateStr]) appData.schedule[selectedDateStr] = [];
@@ -190,7 +225,7 @@ document.getElementById('btn-schedule-new').addEventListener('click', () => {
 });
 document.getElementById('close-schedule-modal').addEventListener('click', () => document.getElementById('schedule-modal').classList.add('hidden'));
 
-// --- PROFILE / LIBRARY (NEW) ---
+// --- PROFILE / LIBRARY ---
 function renderProfile() {
     const list = document.getElementById('profile-library-list');
     list.innerHTML = '';
@@ -219,16 +254,14 @@ function renderProfile() {
 window.editWorkout = function(id) {
     const w = appData.library.find(x => x.id === id);
     if(w) {
-        builderState = JSON.parse(JSON.stringify(w)); // Deep copy into builder state
+        builderState = JSON.parse(JSON.stringify(w)); 
         switchView('view-builder');
     }
 }
 
 window.deleteWorkout = function(id) {
     if(!confirm("Are you sure you want to delete this workout? It will be removed from your schedule.")) return;
-    // Remove from Library
     appData.library = appData.library.filter(w => w.id !== id);
-    // Remove from Schedule
     for(let date in appData.schedule) {
         appData.schedule[date] = appData.schedule[date].filter(item => item.id !== id);
         if(appData.schedule[date].length === 0) delete appData.schedule[date];
@@ -258,13 +291,11 @@ function openPreview(instanceId, workoutId) {
         let exHtml = '';
         set.exercises.forEach(ex => {
             const badgeContent = ex.type === 'timed' ? clockIcon : ex.val;
-            let label = ex.type === 'timed' ? (ex.val > 60 ? 'min:sec' : 'sec') : ex.label;
-            
             let displayVal = ex.type === 'timed' ? 
                              `${Math.floor(ex.val/60)}:${String(ex.val%60).padStart(2,'0')}` 
                              : ex.val;
 
-            exHtml += `<div class="ex-badge-row"><div><div class="ex-badge">${badgeContent}</div><span>${ex.name}</span></div><span style="font-size:1rem; opacity:0.8">${displayVal}</span></div>`;
+            exHtml += `<div class="ex-badge-row"><div><div class="ex-badge">${badgeContent}</div><span>${ex.name}</span></div><span style="font-size:1.1rem; opacity:0.8">${displayVal}</span></div>`;
         });
         card.innerHTML = `<div class="set-card-header"><span>Set ${idx + 1}</span><span>x${set.repeat}</span></div>${exHtml}`;
         container.appendChild(card);
@@ -288,7 +319,7 @@ window.startWorkout = function(previewInstance) {
             const uniqueExercises = set.exercises.map((ex, eIdx) => ({
                 ...ex,
                 uid: `ex_${sIdx}_${r}_${eIdx}`,
-                timeLeft: ex.val, // Val is already normalized to seconds
+                timeLeft: ex.val, 
                 isFinished: false
             }));
 
@@ -418,7 +449,6 @@ document.getElementById('btn-finish-workout').addEventListener('click', () => {
 document.getElementById('add-set-btn').addEventListener('click', () => { builderState.sets.push({ repeat: 1, exercises: [] }); renderBuilder(); });
 
 document.getElementById('save-to-library-btn').addEventListener('click', () => {
-    // If Editing existing workout, remove old version
     if(builderState.id) {
         appData.library = appData.library.filter(w => w.id !== builderState.id);
     }
@@ -431,12 +461,8 @@ document.getElementById('save-to-library-btn').addEventListener('click', () => {
         sets: JSON.parse(JSON.stringify(builderState.sets)) 
     });
     saveData();
-    
-    // Reset state
     builderState = { id: null, name: "", time: "1.5 - 2 hours", theme: "purple", sets: [] };
     document.getElementById('workout-name').value = "";
-    
-    // Switch to Profile to see the saved workout
     switchView('view-profile');
 });
 
@@ -449,11 +475,9 @@ function renderBuilder() {
     const container = document.getElementById('sets-container');
     container.innerHTML = '';
     
-    // Bind top level fields
     document.getElementById('workout-name').value = builderState.name;
     document.getElementById('time-select').value = builderState.time;
 
-    // Set Theme dot
     document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
     const dot = document.querySelector(`.theme-dot.${builderState.theme}`);
     if(dot) dot.classList.add('active');
@@ -463,8 +487,10 @@ function renderBuilder() {
         card.className = 'set-card';
         
         let exRows = set.exercises.map(ex => {
-            let label = ex.type === 'timed' ? 'sec' : ex.label;
-            return `<div class="exercise-row"><span>${ex.name}</span><span>${ex.val} ${label}</span></div>`;
+            let displayVal = ex.val;
+            if(ex.type === 'timed') displayVal = `${Math.floor(ex.val/60)}:${String(ex.val%60).padStart(2,'0')}`;
+            let label = ex.type === 'timed' ? '' : ex.label;
+            return `<div class="exercise-row"><span>${ex.name}</span><span>${displayVal} ${label}</span></div>`;
         }).join('');
 
         card.innerHTML = `
@@ -483,21 +509,21 @@ function renderBuilder() {
     });
 }
 
-// Modal Logic (Direct Text Input Version)
+// Modal Logic (Direct Text Input)
 let targetSet = null, mMode = 'reps';
+
 window.openModal = function(idx) { 
     targetSet = idx; 
     document.getElementById('modal-overlay').classList.remove('hidden'); 
     document.getElementById('modal-name').value = '';
     
-    // Default to REPS
     mMode = 'reps';
     document.getElementById('toggle-reps').classList.add('active');
     document.getElementById('toggle-timed').classList.remove('active');
     document.getElementById('input-reps-container').classList.remove('hidden');
     document.getElementById('input-time-container').classList.add('hidden');
     
-    document.getElementById('modal-val-reps').value = 10;
+    document.getElementById('modal-val-reps').value = "10";
 }
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.add('hidden'));
 
@@ -514,6 +540,11 @@ document.getElementById('toggle-timed').onclick = (e) => {
     document.getElementById('input-time-container').classList.remove('hidden');
 }
 
+// Enforce max bounds on input fields dynamically
+document.getElementById('modal-val-sec').addEventListener('input', function() {
+    if(parseInt(this.value) > 59) this.value = 59;
+});
+
 document.getElementById('modal-save').onclick = () => {
     let finalVal = 0;
     if(mMode === 'reps') {
@@ -521,7 +552,7 @@ document.getElementById('modal-save').onclick = () => {
     } else {
         const mins = parseInt(document.getElementById('modal-val-min').value) || 0;
         const secs = parseInt(document.getElementById('modal-val-sec').value) || 0;
-        finalVal = (mins * 60) + secs; // Convert everything to total seconds for the engine
+        finalVal = (mins * 60) + secs; 
     }
 
     builderState.sets[targetSet].exercises.push({
